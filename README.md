@@ -1,5 +1,11 @@
 ## Setup
 
+### Holon setup
+
+```zsh
+
+```
+
 ### Building components
 
 ```bash
@@ -56,6 +62,7 @@ The runtime distro processes are:
 - `terminal:distro:sys`
 - `timer:distro:sys`
 - `sqlite:distro:sys`
+- `graphdb:distro:sys`
 - `vfs:distro:sys`
 
 The distro userspace packages are:

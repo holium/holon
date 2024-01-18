@@ -15,6 +15,7 @@ lazy_static::lazy_static! {
     pub static ref STATE_PROCESS_ID: ProcessId = ProcessId::new(Some("state"), "distro", "sys");
     pub static ref KV_PROCESS_ID: ProcessId = ProcessId::new(Some("kv"), "distro", "sys");
     pub static ref SQLITE_PROCESS_ID: ProcessId = ProcessId::new(Some("sqlite"), "distro", "sys");
+    pub static ref GRAPHDB_PROCESS_ID: ProcessId = ProcessId::new(Some("graphdb"), "distro", "sys");
 }
 
 //
@@ -1332,4 +1333,47 @@ pub enum SqliteError {
     RusqliteError { error: String },
     #[error("sqlite: input bytes/json/key error: {error}")]
     InputError { error: String },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GraphDbRequest {
+    pub package_id: PackageId,
+    pub db: String,
+    pub action: GraphDbAction,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum GraphDbAction {
+    Open,
+    RemoveDb,
+    Create { statement: String },
+    Update { statement: String },
+    Delete { record_id: String },
+    Read { query: String },
+    Backup,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum GraphDbResponse {
+    Ok,
+    Data,
+    Err { error: GraphDbError },
+}
+
+#[derive(Debug, Serialize, Deserialize, Error)]
+pub enum GraphDbError {
+    #[error("graphdb: DbDoesNotExist")]
+    NoDb,
+    #[error("graphdb: KeyNotFound")]
+    KeyNotFound,
+    #[error("graphdb: no Tx found")]
+    NoTx,
+    #[error("graphdb: No capability: {error}")]
+    NoCap { error: String },
+    #[error("graphdb: surrealdb internal error: {error}")]
+    SurrealDBError { action: String, error: String },
+    #[error("graphdb: input bytes/json/key error: {error}")]
+    InputError { error: String },
+    #[error("graphdb: IO error: {error}")]
+    IOError { error: String },
 }
