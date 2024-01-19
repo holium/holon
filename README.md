@@ -3,7 +3,11 @@
 ### Holon setup
 
 ```zsh
+# Clone the repo.
+git clone git@github.com:holium/holon.git
 
+## update forked process_lib submodule
+git submodule update
 ```
 
 ### Building components
