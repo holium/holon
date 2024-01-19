@@ -1,9 +1,9 @@
 use anyhow::Result;
 use dashmap::DashMap;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::Arc;
 use surrealdb::engine::local::{Db, RocksDb};
-use surrealdb::opt::{Config, Resource};
+use surrealdb::opt::Config;
 use surrealdb::sql::Kind;
 use surrealdb::sql::Value;
 use surrealdb::Surreal;
@@ -41,7 +41,7 @@ pub async fn gdb(
             Some(km) = recv_from_loop.recv() => {
                 if our_node.clone() != km.source.node {
                     println!(
-                        "gdb: request must come from our_node={}, got: {}",
+                        "graphdb: request must come from our_node={}, got: {}",
                         our_node,
                         km.source.node,
                     );
@@ -127,7 +127,7 @@ async fn handle_request(
     let request: GraphDbRequest = match serde_json::from_slice(&body) {
         Ok(r) => r,
         Err(e) => {
-            println!("gdb: got invalid Request: {}", e);
+            println!("graphdb: got invalid Request: {}", e);
             return Err(GraphDbError::InputError {
                 error: "didn't serialize to GraphDbAction.".into(),
             });
@@ -155,7 +155,7 @@ async fn handle_request(
             // handled in check_caps.
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
-        GraphDbAction::Create { statement } => {
+        GraphDbAction::Define { resource } => {
             let db = match open_gdbs.get(&(request.package_id, request.db)) {
                 None => {
                     return Err(GraphDbError::NoDb);
@@ -164,35 +164,40 @@ async fn handle_request(
             };
 
             let db = db.lock().await;
-            db.use_ns(target.process.process()).use_db(db_name).await?;
+            println!("define resource: {:?}", resource);
+            db.use_ns(source.process.package())
+                .use_db(db_name.clone())
+                .await?;
 
-            // create a new record from the query
-            let res = db
-                .query(statement)
+            println!(
+                "base ns {} and db {}",
+                source.process.package(),
+                db_name.clone()
+            );
+
+            println!("query: {:?}", resource.clone().query());
+            println!("params: {:?}", resource.clone().params());
+
+            let query = db
+                .query(resource.clone().query())
+                .bind(resource.clone().params());
+
+            println!("query: {:?}", query);
+
+            query
                 .await
                 .map_err(|err| GraphDbError::SurrealDBError {
-                    action: "Create".into(),
+                    action: "Define".into(),
                     error: err.to_string(),
+                })
+                .and_then(|res| {
+                    println!("define result: {:?}", res);
+                    Ok(())
                 })?;
 
-            let mut response: surrealdb::Response = res.into();
-            let results = match response.take(0)? {
-                Some(Value::Array(array)) => {
-                    let mut results = Vec::new();
-                    for value in array {
-                        results.push(serde_json::to_vec(&value).unwrap());
-                    }
-                    results
-                }
-                Some(value) => vec![serde_json::to_vec(&value).unwrap()],
-                None => vec![],
-            };
-
-            (serde_json::to_vec(&GraphDbResponse::Data).unwrap(), None)
-
-            // (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
+            (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
-        GraphDbAction::Read { query } => {
+        GraphDbAction::Statement { statement, params } => {
             let db = match open_gdbs.get(&(request.package_id, request.db)) {
                 None => {
                     return Err(GraphDbError::NoDb);
@@ -201,77 +206,82 @@ async fn handle_request(
             };
 
             let db = db.lock().await;
-            db.use_ns(target.process.process()).use_db(db_name).await?;
+            db.use_ns(source.process.package()).use_db(db_name).await?;
 
-            let res = db
-                .query(query)
-                .await
-                .map_err(|err| GraphDbError::SurrealDBError {
-                    action: "Get".into(),
-                    error: err.to_string(),
-                })?;
-
-            let mut response: surrealdb::Response = res.into();
-
-            let results = match response.take(0)? {
-                Some(Value::Array(array)) => {
-                    let mut results = Vec::new();
-                    for value in array {
-                        results.push(serde_json::to_vec(&value).unwrap());
+            // if no params, just execute the statement
+            let res = match &params {
+                Some(p) if !p.is_empty() => {
+                    let mut prepared_params = BTreeMap::new();
+                    for (k, v) in params.as_ref().unwrap().iter() {
+                        prepared_params.insert(k.clone(), v.clone());
                     }
-                    results
+
+                    println!("statement: {:?}", statement);
+                    println!("prepared_params: {:?}", prepared_params);
+
+                    db.query(statement.clone())
+                        .bind(prepared_params)
+                        .await
+                        .map_err(|err| GraphDbError::SurrealDBError {
+                            action: "Statement".into(),
+                            error: err.to_string(),
+                        })
                 }
-                Some(value) => vec![serde_json::to_vec(&value).unwrap()],
-                None => vec![],
+                _ => {
+                    // If parameters are None or empty, execute the query without binding params
+                    db.query(statement.clone())
+                        .await
+                        .map_err(|err| GraphDbError::SurrealDBError {
+                            action: "Statement".into(),
+                            error: err.to_string(),
+                        })
+                }
             };
 
+            if res.is_err() {
+                return Err(GraphDbError::SurrealDBError {
+                    action: "Statement".into(),
+                    error: res.unwrap_err().to_string(),
+                });
+            } else {
+                let mut response: surrealdb::Response = res.unwrap().into();
+                let results = match response.take(0)? {
+                    Some(Value::Array(array)) => {
+                        let mut results = Vec::new();
+                        for value in array {
+                            results.push(serde_json::to_vec(&value).unwrap());
+                        }
+                        results
+                    }
+                    Some(value) => vec![serde_json::to_vec(&value).unwrap()],
+                    None => vec![],
+                };
+
+                (
+                    serde_json::to_vec(&GraphDbResponse::Data).unwrap(),
+                    Some(results.concat()),
+                )
+            }
+        }
+        GraphDbAction::Read { statement } => {
+            let db = match open_gdbs.get(&(request.package_id, request.db)) {
+                None => {
+                    return Err(GraphDbError::NoDb);
+                }
+                Some(db) => db,
+            };
+
+            let db = db.lock().await;
+            db.use_ns(source.process.package()).use_db(db_name).await?;
+
+            let res = db.select(statement).await?;
             (
                 serde_json::to_vec(&GraphDbResponse::Data).unwrap(),
-                Some(results.concat()),
+                Some(res),
             )
         }
-        GraphDbAction::Update { statement } => {
-            let db = match open_gdbs.get(&(request.package_id, request.db)) {
-                None => {
-                    return Err(GraphDbError::NoDb);
-                }
-                Some(db) => db,
-            };
-            let db = db.lock().await;
-            db.use_ns(target.process.process()).use_db(db_name).await?;
-
-            db.query(statement)
-                .await
-                .map_err(|err| GraphDbError::SurrealDBError {
-                    action: "Update".into(),
-                    error: err.to_string(),
-                })?;
-
-            (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
-        }
-        GraphDbAction::Delete { record_id } => {
-            let db = match open_gdbs.get(&(request.package_id, request.db)) {
-                None => {
-                    return Err(GraphDbError::NoDb);
-                }
-                Some(db) => db,
-            };
-
-            let db = db.lock().await;
-            db.use_ns(target.process.process()).use_db(db_name).await?;
-            let resource: Resource = Resource::from(record_id.clone());
-
-            db.delete(resource)
-                .await
-                .map_err(|err| GraphDbError::SurrealDBError {
-                    action: "Delete".into(),
-                    error: err.to_string(),
-                })?;
-
-            (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
-        }
         GraphDbAction::Backup => {
-            // looping through open dbs and flushing their memtables
+            // TODO: implement and test
             for db_ref in open_gdbs.iter() {
                 let db = db_ref.value();
                 db.lock().await.export(target.process.process()).await?;
@@ -315,7 +325,7 @@ async fn handle_request(
             .send(Printout {
                 verbosity: 2,
                 content: format!(
-                    "gdb: not sending response: {:?}",
+                    "graphdb: not sending response: {:?}",
                     serde_json::from_slice::<GraphDbResponse>(&body)
                 ),
             })
@@ -338,7 +348,7 @@ async fn check_caps(
     let src_package_id = PackageId::new(source.process.package(), source.process.publisher());
 
     match &request.action {
-        GraphDbAction::Create { .. } => {
+        GraphDbAction::Statement { .. } => {
             send_to_caps_oracle
                 .send(CapMessage::Has {
                     on: source.process.clone(),
@@ -364,7 +374,7 @@ async fn check_caps(
             }
             Ok(())
         }
-        GraphDbAction::Delete { .. } => {
+        GraphDbAction::Define { .. } => {
             send_to_caps_oracle
                 .send(CapMessage::Has {
                     on: source.process.clone(),
@@ -444,41 +454,38 @@ async fn check_caps(
                 return Ok(());
             }
 
-            let db_path = format!("{}/{}/{}", graphdb_path, request.package_id, request.db);
-            fs::create_dir_all(&db_path).await?;
+            fs::create_dir_all(&graphdb_path).await?;
 
-            let db = SurrealDBConn::new::<RocksDb>((db_path, Config::default().strict())).await?;
+            let db =
+                SurrealDBConn::new::<RocksDb>((graphdb_path, Config::default().strict())).await?;
+
+            // Define a namespace for the process
+            db.query(format!("DEFINE namespace {};", source.process.package()))
+                .await
+                .map_err(|err| GraphDbError::SurrealDBError {
+                    action: "Create".into(),
+                    error: err.to_string(),
+                })?;
+
+            db.use_ns(source.process.package()).await.map_err(|err| {
+                GraphDbError::SurrealDBError {
+                    action: "Create".into(),
+                    error: err.to_string(),
+                }
+            })?;
+
+            // Create a new database for the process
+            db.query(format!("DEFINE database {};", request.db))
+                .await
+                .map_err(|err| GraphDbError::SurrealDBError {
+                    action: "Create".into(),
+                    error: err.to_string(),
+                })?;
 
             open_gdbs.insert(
                 (request.package_id.clone(), request.db.clone()),
                 Mutex::new(db),
             );
-            Ok(())
-        }
-        GraphDbAction::Update { .. } => {
-            send_to_caps_oracle
-                .send(CapMessage::Has {
-                    on: source.process.clone(),
-                    cap: Capability {
-                        issuer: Address {
-                            node: our_node.clone(),
-                            process: GRAPHDB_PROCESS_ID.clone(),
-                        },
-                        params: serde_json::to_string(&serde_json::json!({
-                            "kind": "write",
-                            "db": request.db.to_string(),
-                        }))
-                        .unwrap(),
-                    },
-                    responder: send_cap_bool,
-                })
-                .await?;
-            let has_cap = recv_cap_bool.await?;
-            if !has_cap {
-                return Err(GraphDbError::NoCap {
-                    error: request.action.to_string(),
-                });
-            }
             Ok(())
         }
         GraphDbAction::RemoveDb { .. } => {
@@ -586,4 +593,91 @@ impl From<surrealdb::Error> for GraphDbError {
             error: err.to_string(),
         }
     }
+}
+
+#[cfg(test)]
+mod grapdb_test {
+    use super::*;
+    use std::sync::Once;
+
+    static INIT: Once = Once::new();
+
+    // before running this test, make sure to run:
+    pub async fn initialize() {
+        INIT.call_once(|| {
+            let _ = tokio::task::spawn_blocking(|| {
+                let _ = fs::remove_dir_all("/tmp/graphdb_test");
+            });
+        });
+    }
+
+    #[tokio::test]
+    async fn test_query_vars() -> Result<(), Box<dyn std::error::Error>> {
+        // initialize().await;
+        // DEFINE TABLE type::table($name);
+
+        let db = SurrealDBConn::new::<RocksDb>(("/tmp/graphdb_test", Config::default()))
+            .await
+            .unwrap();
+
+        db.query("DEFINE namespace test;").await.unwrap();
+        db.use_ns("test").await.unwrap();
+
+        db.query("DEFINE DATABASE test;").await.unwrap();
+        db.use_db("test").await.unwrap();
+
+        let res = db
+            .query("DEFINE TABLE $name;")
+            .bind(("name".to_string(), "person".to_string()))
+            .await
+            .unwrap();
+        println!("res: {:?}", res);
+        Ok(())
+    }
+
+    // #[tokio::test]
+    // async fn test_db_create() -> Result<(), Box<dyn std::error::Error>> {
+    //     initialize().await;
+    //     let db = SurrealDBConn::new::<RocksDb>(("/tmp/graphdb_test", Config::default()))
+    //         .await
+    //         .unwrap();
+
+    //     db.query("DEFINE namespace test;").await.unwrap();
+    //     db.use_ns("test").await.unwrap();
+
+    //     db.query("DEFINE DATABASE test;").await.unwrap();
+    //     db.use_db("test").await.unwrap();
+
+    //     db.query("DEFINE TABLE person;").await.unwrap();
+
+    //     let mut res1 = db
+    //         .query("CREATE person SET name = $name, company = $company;")
+    //         .bind(serde_json::json!({
+    //             "name": "John Doe",
+    //             "company": "ACME"
+    //         }))
+    //         .await
+    //         .unwrap();
+
+    //     // println!("res1: {:?}", res1);
+
+    //     let mut res2 = db.query("SELECT * FROM person;").await.unwrap();
+    //     println!("res2: {:?}", res2);
+
+    //     let res1_str: Value = match res1.take(0) {
+    //         Ok(Some(value)) => value,
+    //         Ok(None) => Value::Null,
+    //         Err(_) => Value::Null,
+    //     };
+
+    //     let res2_str: Value = match res2.take(0) {
+    //         Ok(Some(value)) => value,
+    //         Ok(None) => Value::Null,
+    //         Err(_) => Value::Null,
+    //     };
+
+    //     assert_eq!(res1_str.all(), res2_str.all());
+
+    //     Ok(())
+    // }
 }

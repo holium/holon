@@ -1,5 +1,11 @@
 target/
+*/target/
+
 wit/
+*/wit/
+*/wasi_snapshot_preview1.wasm
+pkg/*.wasm
+
 .vscode
 .app-signing
 .DS_Store
@@ -13,3 +19,4 @@ target.wasm
 world
 .env
 src/bootstrapped_processes.rs
+*/process_env

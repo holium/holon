@@ -173,6 +173,7 @@ fn main() {
         let entry_path = entry.unwrap().path();
 
         // Build the app
+        println!("cargo:warning=building {}", entry_path.display());
         let parent_pkg_path = format!("{}/pkg", entry_path.display());
         fs::create_dir_all(&parent_pkg_path).unwrap();
 

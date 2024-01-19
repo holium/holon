@@ -1,6 +1,7 @@
 use crate::kernel::process::wit;
 use ring::signature;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -1343,13 +1344,48 @@ pub struct GraphDbRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum DefineResourceType {
+    Namespace { name: String },
+    Database { name: String },
+    Table { name: String },
+}
+
+impl DefineResourceType {
+    pub fn query(&self) -> String {
+        match self {
+            DefineResourceType::Namespace { .. } => {
+                "DEFINE NAMESPACE type::namespace($name);".into()
+            }
+            DefineResourceType::Database { .. } => "DEFINE DATABASE type::database($name);".into(),
+            DefineResourceType::Table { .. } => "DEFINE TABLE type::table($name);".into(),
+        }
+    }
+    pub fn params(&self) -> GraphDbRequestParams {
+        match self {
+            DefineResourceType::Namespace { name } => {
+                vec![("name".to_string(), json!(name))]
+            }
+            DefineResourceType::Database { name } => vec![("name".to_string(), json!(name))],
+            DefineResourceType::Table { name } => vec![("name".to_string(), json!(name))],
+        }
+    }
+}
+pub type GraphDbRequestParams = Vec<(String, serde_json::Value)>;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum GraphDbAction {
     Open,
     RemoveDb,
-    Create { statement: String },
-    Update { statement: String },
-    Delete { record_id: String },
-    Read { query: String },
+    Define {
+        resource: DefineResourceType,
+    },
+    Statement {
+        statement: String,
+        params: Option<GraphDbRequestParams>,
+    },
+    Read {
+        statement: String,
+    },
     Backup,
 }
 
