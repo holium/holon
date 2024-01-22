@@ -13,7 +13,7 @@ wit_bindgen::generate!({
 
 struct Component;
 
-const HOME_PAGE: &str = include_str!("home.html");
+const HOME_PAGE: &str = include_str!("ui/out/index.html");
 
 impl Guest for Component {
     fn init(our: String) {
