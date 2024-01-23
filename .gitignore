@@ -20,3 +20,7 @@ world
 .env
 src/bootstrapped_processes.rs
 */process_env
+
+# Ignore the generated files
+*/memes/*
+*/memes-*/*

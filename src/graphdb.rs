@@ -1,11 +1,10 @@
 use anyhow::Result;
 use dashmap::DashMap;
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use surrealdb::engine::local::{Db, RocksDb};
 use surrealdb::opt::Config;
 use surrealdb::sql::Kind;
-use surrealdb::sql::Value;
 use surrealdb::Surreal;
 
 use tokio::fs;
@@ -109,7 +108,7 @@ async fn handle_request(
         source,
         target,
         message,
-        lazy_load_blob: _blob,
+        lazy_load_blob: blob,
         ..
     } = km.clone();
     let Message::Request(Request {
@@ -176,11 +175,8 @@ async fn handle_request(
             );
 
             println!("query: {:?}", resource.clone().query());
-            println!("params: {:?}", resource.clone().params());
 
-            let query = db
-                .query(resource.clone().query())
-                .bind(resource.clone().params());
+            let query = db.query(resource.clone().query());
 
             println!("query: {:?}", query);
 
@@ -197,7 +193,7 @@ async fn handle_request(
 
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
-        GraphDbAction::Statement { statement, params } => {
+        GraphDbAction::Query { statement } => {
             let db = match open_gdbs.get(&(request.package_id, request.db)) {
                 None => {
                     return Err(GraphDbError::NoDb);
@@ -207,78 +203,43 @@ async fn handle_request(
 
             let db = db.lock().await;
             db.use_ns(source.process.package()).use_db(db_name).await?;
+
+            let params = get_json_params(blob)?;
 
             // if no params, just execute the statement
             let res = match &params {
-                Some(p) if !p.is_empty() => {
-                    let mut prepared_params = BTreeMap::new();
-                    for (k, v) in params.as_ref().unwrap().iter() {
-                        prepared_params.insert(k.clone(), v.clone());
-                    }
-
+                Some(p) => {
                     println!("statement: {:?}", statement);
-                    println!("prepared_params: {:?}", prepared_params);
+                    println!("prepared_params: {:?}", p);
 
-                    db.query(statement.clone())
-                        .bind(prepared_params)
-                        .await
-                        .map_err(|err| GraphDbError::SurrealDBError {
-                            action: "Statement".into(),
-                            error: err.to_string(),
-                        })
+                    db.query(statement.clone()).bind(p).await
                 }
                 _ => {
                     // If parameters are None or empty, execute the query without binding params
-                    db.query(statement.clone())
-                        .await
-                        .map_err(|err| GraphDbError::SurrealDBError {
-                            action: "Statement".into(),
-                            error: err.to_string(),
-                        })
+                    db.query(statement.clone()).await
                 }
             };
 
-            if res.is_err() {
-                return Err(GraphDbError::SurrealDBError {
-                    action: "Statement".into(),
-                    error: res.unwrap_err().to_string(),
-                });
-            } else {
-                let mut response: surrealdb::Response = res.unwrap().into();
-                let results = match response.take(0)? {
-                    Some(Value::Array(array)) => {
-                        let mut results = Vec::new();
-                        for value in array {
-                            results.push(serde_json::to_vec(&value).unwrap());
-                        }
-                        results
-                    }
-                    Some(value) => vec![serde_json::to_vec(&value).unwrap()],
-                    None => vec![],
-                };
-
-                (
-                    serde_json::to_vec(&GraphDbResponse::Data).unwrap(),
-                    Some(results.concat()),
-                )
-            }
-        }
-        GraphDbAction::Read { statement } => {
-            let db = match open_gdbs.get(&(request.package_id, request.db)) {
-                None => {
-                    return Err(GraphDbError::NoDb);
+            let mut results = match res {
+                Ok(response) => response,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return Err(GraphDbError::SurrealDBError {
+                        action: "Query".into(),
+                        error: e.to_string(),
+                    });
                 }
-                Some(db) => db,
             };
 
-            let db = db.lock().await;
-            db.use_ns(source.process.package()).use_db(db_name).await?;
+            let results: surrealdb::sql::Value = results.take(0).unwrap();
+            println!("select_results = {:?}", results.clone().as_raw_string());
 
-            let res = db.select(statement).await?;
-            (
-                serde_json::to_vec(&GraphDbResponse::Data).unwrap(),
-                Some(res),
-            )
+            // let response_data = GraphDbResponse::Data {
+            //     data: results.into_json(),
+            // };
+
+            let serialized_data = serde_json::to_vec(&GraphDbResponse::Data).unwrap();
+            (serialized_data, Some(results.as_raw_string().into_bytes()))
         }
         GraphDbAction::Backup => {
             // TODO: implement and test
@@ -348,7 +309,7 @@ async fn check_caps(
     let src_package_id = PackageId::new(source.process.package(), source.process.publisher());
 
     match &request.action {
-        GraphDbAction::Statement { .. } => {
+        GraphDbAction::Query { .. } => {
             send_to_caps_oracle
                 .send(CapMessage::Has {
                     on: source.process.clone(),
@@ -385,32 +346,6 @@ async fn check_caps(
                         },
                         params: serde_json::to_string(&serde_json::json!({
                             "kind": "write",
-                            "db": request.db.to_string(),
-                        }))
-                        .unwrap(),
-                    },
-                    responder: send_cap_bool,
-                })
-                .await?;
-            let has_cap = recv_cap_bool.await?;
-            if !has_cap {
-                return Err(GraphDbError::NoCap {
-                    error: request.action.to_string(),
-                });
-            }
-            Ok(())
-        }
-        GraphDbAction::Read { .. } => {
-            send_to_caps_oracle
-                .send(CapMessage::Has {
-                    on: source.process.clone(),
-                    cap: Capability {
-                        issuer: Address {
-                            node: our_node.clone(),
-                            process: GRAPHDB_PROCESS_ID.clone(),
-                        },
-                        params: serde_json::to_string(&serde_json::json!({
-                            "kind": "read",
                             "db": request.db.to_string(),
                         }))
                         .unwrap(),
@@ -556,6 +491,18 @@ fn make_error_message(our_name: String, km: &KernelMessage, error: GraphDbError)
     }
 }
 
+fn get_json_params(blob: Option<LazyLoadBlob>) -> Result<Option<serde_json::Value>, GraphDbError> {
+    match blob {
+        None => Ok(serde_json::Value::Array(vec![]).into()),
+        Some(blob) => match serde_json::from_slice::<serde_json::Value>(&blob.bytes) {
+            Ok(params) => Ok(Some(params)),
+            Err(e) => Err(GraphDbError::InputError {
+                error: format!("graphdb: gave unparsable params: {}", e),
+            }),
+        },
+    }
+}
+
 impl std::fmt::Display for GraphDbAction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -593,91 +540,4 @@ impl From<surrealdb::Error> for GraphDbError {
             error: err.to_string(),
         }
     }
-}
-
-#[cfg(test)]
-mod grapdb_test {
-    use super::*;
-    use std::sync::Once;
-
-    static INIT: Once = Once::new();
-
-    // before running this test, make sure to run:
-    pub async fn initialize() {
-        INIT.call_once(|| {
-            let _ = tokio::task::spawn_blocking(|| {
-                let _ = fs::remove_dir_all("/tmp/graphdb_test");
-            });
-        });
-    }
-
-    #[tokio::test]
-    async fn test_query_vars() -> Result<(), Box<dyn std::error::Error>> {
-        // initialize().await;
-        // DEFINE TABLE type::table($name);
-
-        let db = SurrealDBConn::new::<RocksDb>(("/tmp/graphdb_test", Config::default()))
-            .await
-            .unwrap();
-
-        db.query("DEFINE namespace test;").await.unwrap();
-        db.use_ns("test").await.unwrap();
-
-        db.query("DEFINE DATABASE test;").await.unwrap();
-        db.use_db("test").await.unwrap();
-
-        let res = db
-            .query("DEFINE TABLE $name;")
-            .bind(("name".to_string(), "person".to_string()))
-            .await
-            .unwrap();
-        println!("res: {:?}", res);
-        Ok(())
-    }
-
-    // #[tokio::test]
-    // async fn test_db_create() -> Result<(), Box<dyn std::error::Error>> {
-    //     initialize().await;
-    //     let db = SurrealDBConn::new::<RocksDb>(("/tmp/graphdb_test", Config::default()))
-    //         .await
-    //         .unwrap();
-
-    //     db.query("DEFINE namespace test;").await.unwrap();
-    //     db.use_ns("test").await.unwrap();
-
-    //     db.query("DEFINE DATABASE test;").await.unwrap();
-    //     db.use_db("test").await.unwrap();
-
-    //     db.query("DEFINE TABLE person;").await.unwrap();
-
-    //     let mut res1 = db
-    //         .query("CREATE person SET name = $name, company = $company;")
-    //         .bind(serde_json::json!({
-    //             "name": "John Doe",
-    //             "company": "ACME"
-    //         }))
-    //         .await
-    //         .unwrap();
-
-    //     // println!("res1: {:?}", res1);
-
-    //     let mut res2 = db.query("SELECT * FROM person;").await.unwrap();
-    //     println!("res2: {:?}", res2);
-
-    //     let res1_str: Value = match res1.take(0) {
-    //         Ok(Some(value)) => value,
-    //         Ok(None) => Value::Null,
-    //         Err(_) => Value::Null,
-    //     };
-
-    //     let res2_str: Value = match res2.take(0) {
-    //         Ok(Some(value)) => value,
-    //         Ok(None) => Value::Null,
-    //         Err(_) => Value::Null,
-    //     };
-
-    //     assert_eq!(res1_str.all(), res2_str.all());
-
-    //     Ok(())
-    // }
 }

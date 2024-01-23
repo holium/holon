@@ -10,11 +10,23 @@ wit_bindgen::generate!({
     },
 });
 
+#[derive(Debug, Serialize)]
+struct Name<'a> {
+    first: &'a str,
+    last: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+struct Person<'a> {
+    title: &'a str,
+    name: Name<'a>,
+}
+
 ///  Example usage:
 ///
 ///  /m our@graphdb_test:graphdb_test:template.os {"Open": {"db": "test_db"}}
-///
 ///  /m our@graphdb_test:graphdb_test:template.os {"Read": {"db": "test_db", "query": "SELECT * FROM person;"}}
+///
 #[derive(Debug, Serialize, Deserialize)]
 enum TestRequest {
     Open { db: String },
@@ -50,14 +62,22 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                     println!("graphdb_test: db.define {:?}", define_res);
 
                     // Create a person
-                    db.statement(
+                    let result = match db.query(
                         "CREATE person SET name = $name, company = $company;".into(),
-                        Some(vec![
-                            ("name".into(), "John Doe".into()),
-                            ("company".into(), "Acme".into()),
-                        ]),
-                    )?;
-                    println!("graphdb_test: db.create(person)");
+                        Some(serde_json::json!({
+                            "name": "John Doe",
+                            "company": "ACME"
+                        })),
+                    ) {
+                        Ok(result) => result,
+                        Err(e) => {
+                            println!("graphdb_test: db.query error: {:?}", e);
+                            return Ok(());
+                        }
+                    };
+
+                    println!("graphdb_test: db.query {:?}", result);
+
                     Response::new()
                         .body(serde_json::to_vec(&TestResponse::DbOpened).unwrap())
                         .send()
@@ -66,7 +86,7 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                 TestRequest::Read { ref db, ref query } => {
                     let db = graphdb::open(our.package_id(), db)?;
 
-                    let result = db.read(query.into())?;
+                    let result = db.query(query.to_string(), None)?;
                     // convert results to a json array
 
                     let result = serde_json::to_value(result)?;

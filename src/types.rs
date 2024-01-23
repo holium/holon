@@ -1,7 +1,6 @@
 use crate::kernel::process::wit;
 use ring::signature;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -1353,40 +1352,40 @@ pub enum DefineResourceType {
 impl DefineResourceType {
     pub fn query(&self) -> String {
         match self {
-            DefineResourceType::Namespace { .. } => {
-                "DEFINE NAMESPACE type::namespace($name);".into()
-            }
-            DefineResourceType::Database { .. } => "DEFINE DATABASE type::database($name);".into(),
-            DefineResourceType::Table { .. } => "DEFINE TABLE type::table($name);".into(),
-        }
-    }
-    pub fn params(&self) -> GraphDbRequestParams {
-        match self {
             DefineResourceType::Namespace { name } => {
-                vec![("name".to_string(), json!(name))]
+                // strip all whitespace and special characters
+                let name = name
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>();
+
+                format!("DEFINE NAMESPACE {};", name)
             }
-            DefineResourceType::Database { name } => vec![("name".to_string(), json!(name))],
-            DefineResourceType::Table { name } => vec![("name".to_string(), json!(name))],
+            DefineResourceType::Database { name } => {
+                let name = name
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>();
+                format!("DEFINE DATABASE {};", name)
+            }
+            DefineResourceType::Table { name } => {
+                let name = name
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>();
+                format!("DEFINE TABLE {} SCHEMALESS;", name)
+            }
         }
     }
 }
-pub type GraphDbRequestParams = Vec<(String, serde_json::Value)>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum GraphDbAction {
     Open,
-    RemoveDb,
-    Define {
-        resource: DefineResourceType,
-    },
-    Statement {
-        statement: String,
-        params: Option<GraphDbRequestParams>,
-    },
-    Read {
-        statement: String,
-    },
+    Define { resource: DefineResourceType },
+    Query { statement: String },
     Backup,
+    RemoveDb,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
