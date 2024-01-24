@@ -50,7 +50,7 @@ function App() {
         <p>{truncateWalletAddress(walletAddress)}</p>
       </header>
       <section className="h-full flex justify-between gap-6">
-        <aside className="flex flex-col gap-4 min-w-60">
+        <aside className="flex-col gap-6 min-w-60 hidden md:flex">
           <div className="flex flex-col gap-2">
             <h3 className="font-bold uppercase">Categories</h3>
             {categories.map((category) => (
@@ -67,22 +67,28 @@ function App() {
               </a>
             ))}
           </div>
-          <footer className="flex flex-col gap-2">
+          <footer className="flex flex-col gap-4">
             <div className="flex gap-2">
-              <p><strong>1237</strong> memes</p>
-              <p><strong>{categories.length}</strong> categories</p>
-              <p><strong>{templates.length}</strong> templates</p>
+              <p
+                className="truncate"
+              ><strong>1237</strong> memes</p>
+              <p
+                className="truncate"
+                ><strong>{categories.length}</strong> categories</p>
+              <p
+                className="truncate"
+                ><strong>{templates.length}</strong> templates</p>
             </div>
             <div className="flex gap-2">
-              <input placeholder="Paste link" value={uploadLink} onChange={(e) => setUploadLink(e.target.value)} type="text" />
-              <button onClick={onClickUpload} disabled={!uploadLink}>
-                Upload image
+              <input placeholder="Paste link" value={uploadLink} onChange={(e) => setUploadLink(e.target.value)} type="text" className="bg-black-200 h-8 px-3 rounded-xl" />
+              <button onClick={onClickUpload} disabled={!uploadLink} className="bg-blue-400 h-8 px-3 rounded-xl">
+                Upload
               </button>
             </div>
           </footer>
         </aside>
         <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black-200 min-h-80">
-          {!nodeConnected && (
+          {!nodeConnected ? (
             <div className="node-not-connected">
               <h2 style={{ color: "red" }}>Node not connected</h2>
               <h4>
@@ -90,13 +96,14 @@ function App() {
                 in development.
               </h4>
             </div>
-          )}
-          {memes.map((meme) => (
+          ) : (
+            <>{memes.map((meme) => (
             <img key={meme} src={meme} alt="meme" className="rounded-xl w-full" />
-          ))}
+          ))}</>
+          )}
         </main>
         {/* Hide on tablet/phone */}
-        <aside className="min-w-60 hidden xl:block" />
+        <aside className="min-w-60 hidden xl:flex" />
       </section>
     </div>
   );
