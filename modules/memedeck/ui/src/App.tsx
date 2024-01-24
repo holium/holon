@@ -36,22 +36,33 @@ function App() {
         </a>
         <p>{truncateWalletAddress(walletAddress)}</p>
       </header>
-      <section className="relative flex justify-between gap-6">
-        <aside className="height-full flex flex-col gap-4 min-w-60">
+      <section className="h-full flex justify-between gap-6">
+        <aside className="flex flex-col gap-4 min-w-60">
           <div className="flex flex-col gap-2">
             <h3 className="font-bold uppercase">Categories</h3>
             {categories.map((category) => (
-              <div key={category}>{category}</div>
+              <a key={category} href={`#${category}`}>
+                <div>{category}</div>
+              </a>
             ))}
           </div>
           <div className="flex flex-1 flex-col gap-2">
             <h3 className="font-bold uppercase">Templates</h3>
             {templates.map((template) => (
-              <div key={template}>{template}</div>
+              <a key={template} href={`#${template}`}>
+                <div>{template}</div>
+              </a>
             ))}
           </div>
-          <footer>
-            Upload image
+          <footer className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <p><strong>1237</strong> memes</p>
+              <p><strong>{categories.length}</strong> categories</p>
+              <p><strong>{templates.length}</strong> templates</p>
+            </div>
+            <div>
+              Upload image
+            </div>
           </footer>
         </aside>
         <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black opacity-35 min-h-80">
@@ -65,7 +76,8 @@ function App() {
             </div>
           )}
         </main>
-        <aside className="min-w-60" />
+        {/* Hide on tablet/phone */}
+        <aside className="min-w-60 hidden xl:block" />
       </section>
     </div>
   );
