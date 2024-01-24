@@ -26,7 +26,7 @@ function App() {
   }, []);
 
   return (
-    <div className="px-4 max-w-7xl w-full">
+    <div className="px-4 pb-4 max-w-7xl w-full flex flex-col min-h-0">
       <header className="flex justify-between items-center h-16">
         <p>
           ID: <strong>{window.our?.node}</strong>
@@ -36,20 +36,23 @@ function App() {
         </a>
         <p>{truncateWalletAddress(walletAddress)}</p>
       </header>
-      <section className="flex justify-between gap-6">
-        <aside className="flex flex-col gap-4 min-w-60">
+      <section className="relative flex justify-between gap-6">
+        <aside className="height-full flex flex-col gap-4 min-w-60">
           <div className="flex flex-col gap-2">
             <h3 className="font-bold uppercase">Categories</h3>
             {categories.map((category) => (
               <div key={category}>{category}</div>
             ))}
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             <h3 className="font-bold uppercase">Templates</h3>
             {templates.map((template) => (
               <div key={template}>{template}</div>
             ))}
           </div>
+          <footer>
+            Upload image
+          </footer>
         </aside>
         <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black opacity-35 min-h-80">
           {!nodeConnected && (
