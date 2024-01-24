@@ -81,7 +81,7 @@ function App() {
             </div>
           </footer>
         </aside>
-        <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-slate-950 min-h-80">
+        <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black-200 min-h-80">
           {!nodeConnected && (
             <div className="node-not-connected">
               <h2 style={{ color: "red" }}>Node not connected</h2>
