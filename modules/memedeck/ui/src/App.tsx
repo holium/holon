@@ -17,6 +17,17 @@ const templates = ["bell curve", "distracted boyfriend", "expanding brain", "ana
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
 
+  const [uploadLink, setUploadLink] = useState("");
+
+  const onClickUpload = () => {
+    const valid = uploadLink.startsWith("http");
+    if (!valid) {
+      alert("Invalid link");
+      return;
+    }
+    console.log("Uploading", uploadLink);
+  }
+
   useEffect(() => {
     if (window.our?.node && window.our?.process) {
       setNodeConnected(true);
@@ -60,8 +71,11 @@ function App() {
               <p><strong>{categories.length}</strong> categories</p>
               <p><strong>{templates.length}</strong> templates</p>
             </div>
-            <div>
-              Upload image
+            <div className="flex gap-2">
+              <input placeholder="Paste link" value={uploadLink} onChange={(e) => setUploadLink(e.target.value)} type="text" />
+              <button onClick={onClickUpload} disabled={!uploadLink}>
+                Upload image
+              </button>
             </div>
           </footer>
         </aside>
