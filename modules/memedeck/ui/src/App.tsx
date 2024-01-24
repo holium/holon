@@ -26,35 +26,44 @@ function App() {
   }, []);
 
   return (
-    <div className="px-4 max-w-5xl w-full">
-      <header className="flex justify-between items-center h-14">
+    <div className="px-4 max-w-7xl w-full">
+      <header className="flex justify-between items-center h-16">
         <p>
           ID: <strong>{window.our?.node}</strong>
         </p>
-        <h1>Meme Deck</h1>
+        <a href="/">
+          <h1 className="font-bold uppercase">Meme Deck</h1>
+        </a>
         <p>{truncateWalletAddress(walletAddress)}</p>
       </header>
-      <main className="flex">
-        <aside>
-          <h3>Categories</h3>
-          {categories.map((category) => (
-            <div key={category}>{category}</div>
-          ))}
-          <h3>Templates</h3>
-          {templates.map((template) => (
-            <div key={template}>{template}</div>
-          ))}
-        </aside>
-        {!nodeConnected && (
-          <div className="node-not-connected">
-            <h2 style={{ color: "red" }}>Node not connected</h2>
-            <h4>
-              You need to start a node at {PROXY_TARGET} before you can use this UI
-              in development.
-            </h4>
+      <section className="flex justify-between gap-6">
+        <aside className="flex flex-col gap-4 min-w-60">
+          <div className="flex flex-col gap-2">
+            <h3 className="font-bold uppercase">Categories</h3>
+            {categories.map((category) => (
+              <div key={category}>{category}</div>
+            ))}
           </div>
-        )}
-      </main>
+          <div className="flex flex-col gap-2">
+            <h3 className="font-bold uppercase">Templates</h3>
+            {templates.map((template) => (
+              <div key={template}>{template}</div>
+            ))}
+          </div>
+        </aside>
+        <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black opacity-35 min-h-80">
+          {!nodeConnected && (
+            <div className="node-not-connected">
+              <h2 style={{ color: "red" }}>Node not connected</h2>
+              <h4>
+                You need to start a node at {PROXY_TARGET} before you can use this UI
+                in development.
+              </h4>
+            </div>
+          )}
+        </main>
+        <aside className="min-w-60" />
+      </section>
     </div>
   );
 }
