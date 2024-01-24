@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import MockMeme from "./assets/cat.png";
 
 const BASE_URL = import.meta.env.BASE_URL;
 if (window.our) window.our.process = BASE_URL?.replace("/", "");
@@ -17,6 +18,7 @@ const templates = ["bell curve", "distracted boyfriend", "expanding brain", "ana
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
 
+  const [memes, setMemes] = useState([MockMeme]);
   const [uploadLink, setUploadLink] = useState("");
 
   const onClickUpload = () => {
@@ -79,7 +81,7 @@ function App() {
             </div>
           </footer>
         </aside>
-        <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black opacity-35 min-h-80">
+        <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-slate-950 min-h-80">
           {!nodeConnected && (
             <div className="node-not-connected">
               <h2 style={{ color: "red" }}>Node not connected</h2>
@@ -89,6 +91,9 @@ function App() {
               </h4>
             </div>
           )}
+          {memes.map((meme) => (
+            <img key={meme} src={meme} alt="meme" className="rounded-xl w-full" />
+          ))}
         </main>
         {/* Hide on tablet/phone */}
         <aside className="min-w-60 hidden xl:block" />
