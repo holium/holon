@@ -1388,7 +1388,8 @@ impl DefineResourceType {
 pub enum GraphDbAction {
     Open,
     Define { resource: DefineResourceType },
-    Query { statement: String },
+    Write { statement: String },
+    Read { statement: String },
     Backup,
     RemoveDb,
 }

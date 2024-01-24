@@ -193,7 +193,76 @@ async fn handle_request(
 
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
-        GraphDbAction::Query { statement } => {
+        GraphDbAction::Read { statement } => {
+            let db = match open_gdbs.get(&(request.package_id, request.db)) {
+                None => {
+                    return Err(GraphDbError::NoDb);
+                }
+                Some(db) => db,
+            };
+
+            let db = db.lock().await;
+            db.use_ns(source.process.package()).use_db(db_name).await?;
+
+            let mut results = match db.query(statement.clone()).await {
+                Ok(response) => response,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return Err(GraphDbError::SurrealDBError {
+                        action: "Query".into(),
+                        error: e.to_string(),
+                    });
+                }
+            };
+
+            println!("GraphDbAction::Read results = {:?}", results);
+            let results_data = match results.take(0) {
+                Ok(r) => {
+                    println!("r. results = {:?}", r);
+                    match r {
+                        surrealdb::sql::Value::Array(a) => {
+                            println!("Array results = {:?}", a);
+                            Some(
+                                surrealdb::sql::Value::Array(a)
+                                    .to_raw_string()
+                                    .as_bytes()
+                                    .to_vec(),
+                            )
+                        }
+                        surrealdb::sql::Value::Object(o) => {
+                            println!("Object results = {:?}", o);
+                            Some(
+                                surrealdb::sql::Value::Object(o)
+                                    .to_raw_string()
+                                    .as_bytes()
+                                    .to_vec(),
+                            )
+                        }
+                        _ => {
+                            println!("None results = {:?}", results);
+                            Some(
+                                surrealdb::sql::Value::None
+                                    .to_raw_string()
+                                    .as_bytes()
+                                    .to_vec(),
+                            )
+                        }
+                    }
+                }
+                Err(e) => {
+                    return Err(GraphDbError::SurrealDBError {
+                        action: "".into(),
+                        error: e.to_string(),
+                    });
+                }
+            };
+
+            println!("results_data = {:?}", results_data);
+
+            let serialized_data = serde_json::to_vec(&GraphDbResponse::Data).unwrap();
+            (serialized_data, results_data)
+        }
+        GraphDbAction::Write { statement } => {
             let db = match open_gdbs.get(&(request.package_id, request.db)) {
                 None => {
                     return Err(GraphDbError::NoDb);
@@ -206,13 +275,14 @@ async fn handle_request(
 
             let params = get_json_params(blob)?;
 
-            // if no params, just execute the statement
+            // if no params and parmas is an empty array, just execute the statement
             let res = match &params {
                 Some(p) => {
-                    println!("statement: {:?}", statement);
-                    println!("prepared_params: {:?}", p);
-
-                    db.query(statement.clone()).bind(p).await
+                    if p.is_array() && p.as_array().unwrap().is_empty() {
+                        db.query(statement.clone()).await
+                    } else {
+                        db.query(statement.clone()).bind(p).await
+                    }
                 }
                 _ => {
                     // If parameters are None or empty, execute the query without binding params
@@ -220,26 +290,20 @@ async fn handle_request(
                 }
             };
 
-            let mut results = match res {
+            let results = match res {
                 Ok(response) => response,
                 Err(e) => {
                     eprintln!("Error: {}", e);
                     return Err(GraphDbError::SurrealDBError {
-                        action: "Query".into(),
+                        action: "".into(),
                         error: e.to_string(),
                     });
                 }
             };
 
-            let results: surrealdb::sql::Value = results.take(0).unwrap();
-            println!("select_results = {:?}", results.clone().as_raw_string());
+            println!("results = {:?}", results);
 
-            // let response_data = GraphDbResponse::Data {
-            //     data: results.into_json(),
-            // };
-
-            let serialized_data = serde_json::to_vec(&GraphDbResponse::Data).unwrap();
-            (serialized_data, Some(results.as_raw_string().into_bytes()))
+            (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
         GraphDbAction::Backup => {
             // TODO: implement and test
@@ -309,7 +373,7 @@ async fn check_caps(
     let src_package_id = PackageId::new(source.process.package(), source.process.publisher());
 
     match &request.action {
-        GraphDbAction::Query { .. } => {
+        GraphDbAction::Write { .. } => {
             send_to_caps_oracle
                 .send(CapMessage::Has {
                     on: source.process.clone(),
@@ -320,6 +384,32 @@ async fn check_caps(
                         },
                         params: serde_json::to_string(&serde_json::json!({
                             "kind": "write",
+                            "db": request.db.to_string(),
+                        }))
+                        .unwrap(),
+                    },
+                    responder: send_cap_bool,
+                })
+                .await?;
+            let has_cap = recv_cap_bool.await?;
+            if !has_cap {
+                return Err(GraphDbError::NoCap {
+                    error: request.action.to_string(),
+                });
+            }
+            Ok(())
+        }
+        GraphDbAction::Read { .. } => {
+            send_to_caps_oracle
+                .send(CapMessage::Has {
+                    on: source.process.clone(),
+                    cap: Capability {
+                        issuer: Address {
+                            node: our_node.clone(),
+                            process: GRAPHDB_PROCESS_ID.clone(),
+                        },
+                        params: serde_json::to_string(&serde_json::json!({
+                            "kind": "read",
                             "db": request.db.to_string(),
                         }))
                         .unwrap(),
@@ -493,13 +583,21 @@ fn make_error_message(our_name: String, km: &KernelMessage, error: GraphDbError)
 
 fn get_json_params(blob: Option<LazyLoadBlob>) -> Result<Option<serde_json::Value>, GraphDbError> {
     match blob {
-        None => Ok(serde_json::Value::Array(vec![]).into()),
-        Some(blob) => match serde_json::from_slice::<serde_json::Value>(&blob.bytes) {
-            Ok(params) => Ok(Some(params)),
-            Err(e) => Err(GraphDbError::InputError {
-                error: format!("graphdb: gave unparsable params: {}", e),
-            }),
-        },
+        None => Ok(None),
+        Some(blob) => {
+            println!("blob = {:?}", blob);
+            match serde_json::from_slice::<serde_json::Value>(&blob.bytes) {
+                Ok(params) => {
+                    if params.is_array() && params.as_array().unwrap().is_empty() {
+                        return Ok(None);
+                    }
+                    Ok(Some(params))
+                }
+                Err(e) => Err(GraphDbError::InputError {
+                    error: format!("graphdb: gave unparsable params: {}", e),
+                }),
+            }
+        }
     }
 }
 

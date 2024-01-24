@@ -62,12 +62,9 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                     println!("graphdb_test: db.define {:?}", define_res);
 
                     // Create a person
-                    let result = match db.query(
-                        "CREATE person SET name = $name, company = $company;".into(),
-                        Some(serde_json::json!({
-                            "name": "John Doe",
-                            "company": "ACME"
-                        })),
+                    let result = match db.write(
+                        "CREATE person SET name = 'John Doe', company = 'Acme';".to_string(),
+                        None,
                     ) {
                         Ok(result) => result,
                         Err(e) => {
@@ -86,7 +83,7 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                 TestRequest::Read { ref db, ref query } => {
                     let db = graphdb::open(our.package_id(), db)?;
 
-                    let result = db.query(query.to_string(), None)?;
+                    let result = db.read(query.to_string())?;
                     // convert results to a json array
 
                     let result = serde_json::to_value(result)?;
