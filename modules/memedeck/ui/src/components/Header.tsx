@@ -1,4 +1,8 @@
 import HomeSvg from "../assets/home.svg";
+import ChevronSvg from "../assets/chevron.svg";
+import SettingsSvg from "../assets/settings.svg";
+import OptimismPng from "../assets/optimism.png";
+import { Pill } from "./Pill";
 
 const walletAddress = "0x1234567890123456789012345678901234567890";
 
@@ -12,20 +16,32 @@ export const Header = () => {
 
   return (
     <header className="flex justify-between items-center h-16">
-      <a
-        href="/"
-        className="pointer flex items-center gap-2 px-3 rounded-full h-9 bg-white-4 border-white-10 border text-white"
-      >
-        <img src={HomeSvg} alt="home" className="w-4 h-4" />
-        <p>
-          <span className="text-md font-bold opacity-80">{nodeParts[0]}</span>
-          <span className="text-md opacity-30">{`.${nodeParts[1]}`}</span>
-        </p>
+      <a href="/">
+        <Pill>
+          <img src={HomeSvg} alt="home" className="w-4 h-4" />
+          <p>
+            <span className="text-md font-bold opacity-80">{nodeParts[0]}</span>
+            <span className="text-md opacity-30">{`.${nodeParts[1]}`}</span>
+          </p>
+        </Pill>
       </a>
       <a href="/">
-        <h1 className="text-3xl font-bold uppercase bangers">Meme Deck</h1>
+        <h1 className="text-3xl font-bold uppercase bangers select-none">
+          Meme Deck
+        </h1>
       </a>
-      <p>{truncatedWalletAddress}</p>
+      <div className="flex items-center gap-3">
+        <Pill>
+          <img src={OptimismPng} alt="Optimism" className="w-4 h-4" />
+          <p className="text-md font-bold opacity-70">
+            {truncatedWalletAddress}
+          </p>
+          <img src={ChevronSvg} alt="Dropdown" className="w-4 h-4" />
+        </Pill>
+        <Pill>
+          <img src={SettingsSvg} alt="Dropdown" className="w-4 h-4" />
+        </Pill>
+      </div>
     </header>
   );
 };
