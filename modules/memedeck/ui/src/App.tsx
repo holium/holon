@@ -4,12 +4,12 @@ import { Header } from "./components/Header";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { SearchBar } from "./components/SearchBar";
 import { BASE_URL } from "./util/proxy";
-import { Category, MemeTemplate } from "./util/data";
+import { Meme, MemeCategory, MemeTemplate } from "./util/types";
 
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
-  const [memes, setMemes] = useState<string[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [memes, setMemes] = useState<Meme[]>([]);
+  const [categories, setCategories] = useState<MemeCategory[]>([]);
   const [templates, setTemplates] = useState<MemeTemplate[]>([]);
 
   useEffect(() => {
@@ -19,6 +19,24 @@ function App() {
       .then((data) => {
         console.log("Categories", data);
         setCategories(data);
+      })
+      .catch((error) => console.error(error));
+
+    // Get templates
+    fetch(`${BASE_URL}/templates`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Templates", data);
+        setTemplates(data);
+      })
+      .catch((error) => console.error(error));
+
+    // Get memes
+    fetch(`${BASE_URL}/memes`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Memes", data);
+        setMemes(data);
       })
       .catch((error) => console.error(error));
 
@@ -41,15 +59,17 @@ function App() {
               <NodeNotConnected />
             ) : (
               <>
-                {memes.map((meme) => (
-                  <a href={`#${meme}`} key={meme}>
-                    <img
-                      src={meme}
-                      alt="meme"
-                      className="rounded-xl w-full h-auto"
-                    />
-                  </a>
-                ))}
+                {memes
+                  .sort((a, b) => (a < b ? 1 : -1))
+                  .map((meme) => (
+                    <a href={`#${meme.id}`} key={meme.id}>
+                      <img
+                        src={BASE_URL + meme.url}
+                        alt="meme"
+                        className="rounded-xl w-full h-auto"
+                      />
+                    </a>
+                  ))}
               </>
             )}
           </div>

@@ -1,10 +1,10 @@
 import { Statistics } from "./Statistics";
 import { PasteLink } from "./PasteLink";
-import { Category, MemeTemplate } from "../../util/data";
+import { Meme, MemeCategory, MemeTemplate } from "../../util/types";
 
 type Props = {
-  memes: string[];
-  categories: Category[];
+  memes: Meme[];
+  categories: MemeCategory[];
   templates: MemeTemplate[];
 };
 
@@ -24,7 +24,7 @@ export const Sidebar = ({ memes, categories, templates }: Props) => {
       <div className="flex flex-col gap-2">
         <h3 className="font-bold text-sm uppercase">Categories</h3>
         {categories.map((category) => (
-          <a key={category.name} href={`#${category}`} className="flex">
+          <a key={category.name} href={`#${category.name}`} className="flex">
             <div className="flex-1 opacity-70">{category.name}</div>
             <div className="opacity-40">{category.count}</div>
           </a>
@@ -33,7 +33,7 @@ export const Sidebar = ({ memes, categories, templates }: Props) => {
       <div className="flex flex-1 flex-col gap-2">
         <h3 className="font-bold text-sm uppercase">Templates</h3>
         {templates.map((template) => (
-          <a key={template.name} href={`#${template}`} className="flex">
+          <a key={template.name} href={`#${template.name}`} className="flex">
             <div className="flex-1 opacity-70">{template.name}</div>
             <div className="opacity-40">{template.count}</div>
           </a>

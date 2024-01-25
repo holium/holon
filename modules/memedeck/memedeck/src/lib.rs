@@ -11,7 +11,7 @@ use kinode_process_lib::{
 use serde::{Deserialize, Serialize};
 
 mod data;
-use data::{Category, CATEGORIES};
+use data::{MEME_CATEGORIES, MEME_TEMPLATES, MEMES};
 
 struct Component;
 
@@ -49,11 +49,33 @@ fn handle_http_server_request(
                     let mut headers = HashMap::new();
                     headers.insert("Content-Type".to_string(), "application/json".to_string());
 
-                    send_response(
-                        StatusCode::OK,
-                        Some(headers),
-                        serde_json::to_vec(&*CATEGORIES)?,
-                    )?;
+                    // Route to appropriate endpoint based on the path
+                    match request.path()?.as_str() {
+                        "/categories" => {
+                            send_response(
+                                StatusCode::OK,
+                                Some(headers.clone()),
+                                serde_json::to_vec(&*MEME_CATEGORIES)?,
+                            )?;
+                        }
+                        "/templates" => {
+                            send_response(
+                                StatusCode::OK,
+                                Some(headers.clone()),
+                                serde_json::to_vec(&*MEME_TEMPLATES)?,
+                            )?;
+                        }
+                        "/memes" => {
+                            send_response(
+                                StatusCode::OK,
+                                Some(headers),
+                                serde_json::to_vec(&*MEMES)?, // Assume MEMES is a constant holding your memes data
+                            )?;
+                        }
+                        _ => {
+                            send_response(StatusCode::NOT_FOUND, None, vec![])?;
+                        }
+                    }
                 }
                 _ => {
                     send_response(StatusCode::METHOD_NOT_ALLOWED, None, vec![])?;
@@ -73,6 +95,8 @@ fn main(our: Address) -> anyhow::Result<()> {
 
     serve_ui(&our, "ui")?;
     bind_http_path("/categories", true, false)?;
+    bind_http_path("/templates", true, false)?;
+    bind_http_path("/memes", true, false)?; // Bind the new /memes endpoint
 
     main_loop(&our);
 
