@@ -1,18 +1,36 @@
 use anyhow::Result;
 use dashmap::DashMap;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use surrealdb::engine::local::{Db, RocksDb};
 use surrealdb::opt::Config;
 use surrealdb::sql::Kind;
 use surrealdb::Surreal;
-
 use tokio::fs;
 use tokio::sync::Mutex;
 
 use crate::types::*;
 
 pub type SurrealDBConn = Surreal<Db>;
+
+lazy_static::lazy_static! {
+    static ref READ_KEYWORDS: HashSet<String> = {
+        let mut set = HashSet::new();
+        let keywords = ["SELECT", "SHOW", "LIVE SELECT", "INFO", "USE"];
+        for &keyword in &keywords {
+            set.insert(keyword.to_string());
+        }
+        set
+    };
+    static ref WRITE_KEYWORDS: HashSet<String> = {
+        let mut set = HashSet::new();
+        let keywords = ["BEGIN", "CANCEL", "COMMIT", "CONTINUE", "CREATE", "DEFINE", "DELETE", "INSERT", "RELATE", "REMOVE", "UPDATE"];
+        for &keyword in &keywords {
+            set.insert(keyword.to_string());
+        }
+        set
+    };
+}
 
 pub async fn gdb(
     our_node: String,
@@ -106,7 +124,6 @@ async fn handle_request(
     let KernelMessage {
         id,
         source,
-        target,
         message,
         lazy_load_blob: blob,
         ..
@@ -163,32 +180,16 @@ async fn handle_request(
             };
 
             let db = db.lock().await;
-            println!("define resource: {:?}", resource);
-            db.use_ns(source.process.package())
-                .use_db(db_name.clone())
-                .await?;
-
-            println!(
-                "base ns {} and db {}",
-                source.process.package(),
-                db_name.clone()
-            );
-
-            println!("query: {:?}", resource.clone().query());
+            db.use_ns(source.process.package()).await.unwrap();
+            db.use_db(db_name).await.unwrap();   
 
             let query = db.query(resource.clone().query());
-
-            println!("query: {:?}", query);
 
             query
                 .await
                 .map_err(|err| GraphDbError::SurrealDBError {
-                    action: "Define".into(),
+                    action: "".into(),
                     error: err.to_string(),
-                })
-                .and_then(|res| {
-                    println!("define result: {:?}", res);
-                    Ok(())
                 })?;
 
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
@@ -201,50 +202,47 @@ async fn handle_request(
                 Some(db) => db,
             };
 
+            // remove escape characters
+            let statement = statement.replace("\\", "");
+            let first_word = statement
+                .split_whitespace()
+                .next()
+                .map(|word| word.to_uppercase())
+                .unwrap_or("".to_string());
+            if !READ_KEYWORDS.contains(&first_word) {
+                return Err(GraphDbError::NotAReadKeyword);
+            }
+
             let db = db.lock().await;
-            db.use_ns(source.process.package()).use_db(db_name).await?;
+            db.use_ns(source.process.package()).await.unwrap();
+            db.use_db(db_name).await.unwrap();
 
             let mut results = match db.query(statement.clone()).await {
                 Ok(response) => response,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
                     return Err(GraphDbError::SurrealDBError {
-                        action: "Query".into(),
+                        action: "".into(),
                         error: e.to_string(),
                     });
                 }
             };
 
-            println!("GraphDbAction::Read results = {:?}", results);
             let results_data = match results.take(0) {
                 Ok(r) => {
-                    println!("r. results = {:?}", r);
                     match r {
                         surrealdb::sql::Value::Array(a) => {
-                            println!("Array results = {:?}", a);
                             Some(
-                                surrealdb::sql::Value::Array(a)
-                                    .to_raw_string()
-                                    .as_bytes()
-                                    .to_vec(),
+                                surrealdb::sql::Value::Array(a).into_json().to_string().as_bytes().to_vec()
                             )
                         }
                         surrealdb::sql::Value::Object(o) => {
-                            println!("Object results = {:?}", o);
                             Some(
-                                surrealdb::sql::Value::Object(o)
-                                    .to_raw_string()
-                                    .as_bytes()
-                                    .to_vec(),
+                                surrealdb::sql::Value::Object(o).into_json().to_string().as_bytes().to_vec()
                             )
                         }
                         _ => {
-                            println!("None results = {:?}", results);
                             Some(
-                                surrealdb::sql::Value::None
-                                    .to_raw_string()
-                                    .as_bytes()
-                                    .to_vec(),
+                                surrealdb::sql::Value::None.into_json().to_string().as_bytes().to_vec()
                             )
                         }
                     }
@@ -257,8 +255,6 @@ async fn handle_request(
                 }
             };
 
-            println!("results_data = {:?}", results_data);
-
             let serialized_data = serde_json::to_vec(&GraphDbResponse::Data).unwrap();
             (serialized_data, results_data)
         }
@@ -270,8 +266,21 @@ async fn handle_request(
                 Some(db) => db,
             };
 
+            // remove escape characters
+            let statement = statement.replace("\\", "");
+            let first_word = statement
+                .split_whitespace()
+                .next()
+                .map(|word| word.to_uppercase())
+                .unwrap_or("".to_string());
+
+            if !WRITE_KEYWORDS.contains(&first_word) {
+                return Err(GraphDbError::NotAWriteKeyword);
+            }
+
             let db = db.lock().await;
-            db.use_ns(source.process.package()).use_db(db_name).await?;
+            db.use_ns(source.process.package()).await.unwrap();
+            db.use_db(db_name).await.unwrap();
 
             let params = get_json_params(blob)?;
 
@@ -301,16 +310,15 @@ async fn handle_request(
                 }
             };
 
-            println!("results = {:?}", results);
+            println!("\n results = {:?}", results);
 
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
         GraphDbAction::Backup => {
             // TODO: implement and test
-            for db_ref in open_gdbs.iter() {
-                let db = db_ref.value();
-                db.lock().await.export(target.process.process()).await?;
-            }
+            // for db_ref in open_gdbs.iter() {
+            //     let db = db_ref.value();
+            // }
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
     };
@@ -481,10 +489,15 @@ async fn check_caps(
 
             fs::create_dir_all(&graphdb_path).await?;
 
-            let db =
-                SurrealDBConn::new::<RocksDb>((graphdb_path, Config::default().strict())).await?;
+            let db = SurrealDBConn::new::<RocksDb>((graphdb_path, Config::default())).await.map_err(
+                |err| GraphDbError::SurrealDBError {
+                        action: "".into(),
+                        error: err.to_string(),
+                    },
+                ).unwrap();
 
             // Define a namespace for the process
+            // TODO: if it doesn't already exist
             db.query(format!("DEFINE namespace {};", source.process.package()))
                 .await
                 .map_err(|err| GraphDbError::SurrealDBError {
@@ -499,7 +512,8 @@ async fn check_caps(
                 }
             })?;
 
-            // Create a new database for the process
+            // Create a new database for the process 
+            // TODO: if it doesn't already exist
             db.query(format!("DEFINE database {};", request.db))
                 .await
                 .map_err(|err| GraphDbError::SurrealDBError {
@@ -507,9 +521,11 @@ async fn check_caps(
                     error: err.to_string(),
                 })?;
 
+            println!("\n graphdb: created/opened db: {}", request.db);
+
             open_gdbs.insert(
                 (request.package_id.clone(), request.db.clone()),
-                Mutex::new(db),
+                Mutex::new(db.clone()),
             );
             Ok(())
         }
@@ -585,7 +601,6 @@ fn get_json_params(blob: Option<LazyLoadBlob>) -> Result<Option<serde_json::Valu
     match blob {
         None => Ok(None),
         Some(blob) => {
-            println!("blob = {:?}", blob);
             match serde_json::from_slice::<serde_json::Value>(&blob.bytes) {
                 Ok(params) => {
                     if params.is_array() && params.as_array().unwrap().is_empty() {

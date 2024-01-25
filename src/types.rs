@@ -1411,6 +1411,10 @@ pub enum GraphDbError {
     NoTx,
     #[error("graphdb: No capability: {error}")]
     NoCap { error: String },
+    #[error("sqlite: NotAWriteKeyword")]
+    NotAWriteKeyword,
+    #[error("sqlite: NotAReadKeyword")]
+    NotAReadKeyword,
     #[error("graphdb: surrealdb internal error: {error}")]
     SurrealDBError { action: String, error: String },
     #[error("graphdb: input bytes/json/key error: {error}")]

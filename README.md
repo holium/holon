@@ -20,7 +20,7 @@ If you have questions, join the [Kinode discord](https://discord.gg/TCgdca5Bjt) 
 git clone git@github.com:holium/holon.git
 
 ## update forked process_lib submodule
-git submodule update
+git submodule update --init
 ```
 
 ### Building components
