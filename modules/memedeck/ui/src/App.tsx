@@ -47,7 +47,7 @@ function App() {
           ID: <strong>{window.our?.node}</strong>
         </p>
         <a href="/">
-          <h1 className="font-bold uppercase">Meme Deck</h1>
+          <h1 className="text-3xl font-bold uppercase bangers">Meme Deck</h1>
         </a>
         <p>{truncateWalletAddress(walletAddress)}</p>
       </header>

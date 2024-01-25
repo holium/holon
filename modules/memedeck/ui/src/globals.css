@@ -23,3 +23,7 @@ body {
   display: flex;
   justify-content: center;
 }
+
+.bangers {
+  font-family: "Bangers", cursive;
+}
