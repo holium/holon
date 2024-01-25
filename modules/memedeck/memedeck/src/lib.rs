@@ -11,7 +11,7 @@ use kinode_process_lib::{
 use serde::{Deserialize, Serialize};
 
 mod data;
-use data::{UploadData, MEME_CATEGORIES, MEME_TEMPLATES, MEMES};
+use data::{Meme, MEME_CATEGORIES, MEME_TEMPLATES, MEMES, UploadData};
 
 struct Component;
 
@@ -66,10 +66,20 @@ fn handle_http_server_request(
                             )?;
                         }
                         "/memes" => {
+                            println!("Got request for memes");
+                            println!("request: {:?}", request);
+                            // TO-FIX: field `query_params` of struct `IncomingHttpRequest` is private
+                            // let query_params = request.query_params;
+                            // let query = parse_query_param(&query_params, "q");
+                            let query = None;
+                            let memes = filter_memes_by_query(&query);
+                            let mut headers = HashMap::new();
+                            headers.insert("Content-Type".to_string(), "application/json".to_string());
+                            
                             send_response(
                                 StatusCode::OK,
                                 Some(headers),
-                                serde_json::to_vec(&*MEMES)?, // Assume MEMES is a constant holding your memes data
+                                serde_json::to_vec(&memes)?,
                             )?;
                         }
                         _ => {
@@ -109,6 +119,43 @@ fn handle_http_server_request(
     };
 
     Ok(())
+}
+
+fn filter_memes_by_query(query: &Option<String>) -> Vec<Meme> {
+    if let Some(query) = query {
+        MEMES
+            .iter()
+            .filter(|meme| meme.matches_query(&query))
+            .cloned()
+            .collect()
+    } else {
+        MEMES.clone()
+    }
+}
+
+fn parse_query_param(query_params: &str, param_name: &str) -> Option<String> {
+    query_params
+        .split('&')
+        .filter_map(|param| {
+            let parts: Vec<&str> = param.split('=').collect();
+            if parts.len() == 2 && parts[0] == param_name {
+                Some(parts[1].to_string())
+            } else {
+                None
+            }
+        })
+        .next()
+}
+
+impl Meme {
+    fn matches_query(&self, query: &str) -> bool {
+        // TODO: make more sophisticated
+        if self.id.contains(query) {
+            return true;
+        }
+
+        return false;
+    }
 }
 
 fn main(our: Address) -> anyhow::Result<()> {

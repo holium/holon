@@ -38,7 +38,7 @@ lazy_static! {
     ];
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Meme {
     pub id: String,
     pub url: String,

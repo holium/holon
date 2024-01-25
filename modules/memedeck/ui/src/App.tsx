@@ -9,6 +9,7 @@ import { Meme, MemeCategory, MemeTemplate } from "./util/types";
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
   const [memes, setMemes] = useState<Meme[]>([]);
+  const [filteredMemes, setFilteredMemes] = useState<Meme[]>([]);
   const [categories, setCategories] = useState<MemeCategory[]>([]);
   const [templates, setTemplates] = useState<MemeTemplate[]>([]);
 
@@ -47,19 +48,34 @@ function App() {
     }
   }, []);
 
+  const onSearch = (query: string) => {
+    if (!query) {
+      setFilteredMemes(memes);
+      return;
+    }
+
+    fetch(`${BASE_URL}/memes?query=${query}`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Search", data);
+        setFilteredMemes(data);
+      })
+      .catch((error) => console.error(error));
+  };
+
   return (
     <div className="px-4 pb-4 gap-2 max-w-7xl w-full flex flex-col min-h-0">
       <Header />
       <section className="flex flex-1 min-h-0 justify-between gap-6">
         <Sidebar memes={memes} categories={categories} templates={templates} />
         <main className="flex flex-col flex-1 h-full gap-3">
-          <SearchBar />
+          <SearchBar onSearch={onSearch} />
           <div className="flex flex-col flex-1 h-full p-5 gap-5 overflow-y-scroll rounded-3xl bg-black-200 border border-white-4">
             {!nodeConnected ? (
               <NodeNotConnected />
             ) : (
               <>
-                {memes
+                {filteredMemes
                   .sort((a, b) => (a < b ? 1 : -1))
                   .map((meme) => (
                     <a href={`#${meme.id}`} key={meme.id}>
