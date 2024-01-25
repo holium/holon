@@ -18,7 +18,6 @@ function App() {
     fetch(`${BASE_URL}/categories`)
       .then((response) => response.json())
       .then((data) => {
-        console.log("Categories", data);
         setCategories(data);
       })
       .catch((error) => console.error(error));
@@ -27,7 +26,6 @@ function App() {
     fetch(`${BASE_URL}/templates`)
       .then((response) => response.json())
       .then((data) => {
-        console.log("Templates", data);
         setTemplates(data);
       })
       .catch((error) => console.error(error));
@@ -36,8 +34,8 @@ function App() {
     fetch(`${BASE_URL}/memes`)
       .then((response) => response.json())
       .then((data) => {
-        console.log("Memes", data);
         setMemes(data);
+        setFilteredMemes(data);
       })
       .catch((error) => console.error(error));
 
@@ -57,7 +55,6 @@ function App() {
     fetch(`${BASE_URL}/memes?query=${query}`)
       .then((response) => response.json())
       .then((data) => {
-        console.log("Search", data);
         setFilteredMemes(data);
       })
       .catch((error) => console.error(error));
