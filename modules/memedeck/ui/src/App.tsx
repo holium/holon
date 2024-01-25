@@ -73,7 +73,7 @@ function App() {
             ) : (
               <>
                 {filteredMemes
-                  .sort((a, b) => (a < b ? 1 : -1))
+                  .sort((a, b) => (a.id < b.id ? 1 : -1))
                   .map((meme) => (
                     <a href={`#${meme.id}`} key={meme.id}>
                       <img
