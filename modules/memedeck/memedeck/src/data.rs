@@ -2,6 +2,11 @@ use serde::{Serialize, Deserialize};
 use lazy_static::lazy_static;
 
 #[derive(Serialize, Deserialize)]
+pub struct UploadData {
+    pub url: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct MemeCategory {
     pub name: String,
     pub count: u32,

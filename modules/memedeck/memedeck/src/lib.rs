@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use kinode_process_lib::{
-    await_message, call_init, get_blob,
+    await_message, call_init, get_blob, http,
     http::{
         bind_http_path, send_response, serve_ui, HttpServerRequest, IncomingHttpRequest,
         StatusCode,
@@ -11,7 +11,7 @@ use kinode_process_lib::{
 use serde::{Deserialize, Serialize};
 
 mod data;
-use data::{MEME_CATEGORIES, MEME_TEMPLATES, MEMES};
+use data::{UploadData, MEME_CATEGORIES, MEME_TEMPLATES, MEMES};
 
 struct Component;
 
@@ -77,6 +77,27 @@ fn handle_http_server_request(
                         }
                     }
                 }
+                "POST" => {
+                    match request.path()?.as_str() {
+                        "/upload" => {
+                            // Extract the URL from the request body
+                            let Some(blob) = get_blob() else {
+                                return http::send_response(http::StatusCode::BAD_REQUEST, None, vec![]);
+                            };
+                            let blob_json = serde_json::from_slice::<serde_json::Value>(&blob.bytes)?;
+                            let upload_data = serde_json::from_value::<UploadData>(blob_json)?;
+
+                            // TODO: Handle the URL (e.g., download or process the data)
+                            println!("Received URL for upload: {}", upload_data.url);
+
+                            // Send a success response
+                            send_response(StatusCode::OK, None, vec![])?;
+                        }
+                        _ => {
+                            send_response(StatusCode::NOT_FOUND, None, vec![])?;
+                        }
+                    }
+                }
                 _ => {
                     send_response(StatusCode::METHOD_NOT_ALLOWED, None, vec![])?;
                 }
@@ -96,7 +117,9 @@ fn main(our: Address) -> anyhow::Result<()> {
     serve_ui(&our, "ui")?;
     bind_http_path("/categories", true, false)?;
     bind_http_path("/templates", true, false)?;
-    bind_http_path("/memes", true, false)?; // Bind the new /memes endpoint
+    bind_http_path("/memes", true, false)?; // TODO: handle search query
+    bind_http_path("/upload", true, false)?;
+
 
     main_loop(&our);
 
