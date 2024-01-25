@@ -2,19 +2,23 @@ import { useState, useEffect } from "react";
 import { NodeNotConnected } from "./components/NodeNotConnected";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/sidebar/Sidebar";
-import { categories, memes, templates } from "./util/data";
 import { SearchBar } from "./components/SearchBar";
 import { BASE_URL } from "./util/proxy";
+import { Category, MemeTemplate } from "./util/data";
 
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
+  const [memes, setMemes] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [templates, setTemplates] = useState<MemeTemplate[]>([]);
 
   useEffect(() => {
     // Get message history using http
-    fetch(`${BASE_URL}/messages`)
+    fetch(`${BASE_URL}/categories`)
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
+        console.log("Categories", data);
+        setCategories(data);
       })
       .catch((error) => console.error(error));
 
