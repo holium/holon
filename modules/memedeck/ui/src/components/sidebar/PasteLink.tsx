@@ -24,7 +24,7 @@ export const PasteLink = () => {
       <button
         onClick={onClickUpload}
         disabled={!uploadLink}
-        className="bg-blue-500 text-sm h-8 px-3 rounded-xl"
+        className="bg-blue-500 text-sm h-8 px-3 rounded-xl cursor-pointer"
       >
         Upload
       </button>

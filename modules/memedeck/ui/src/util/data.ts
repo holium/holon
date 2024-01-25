@@ -1,7 +1,9 @@
 import AirBnbMeme from "../assets/airbnb.jpg";
 import CatMeme from "../assets/cat.png";
+import BlimpMeme from "../assets/blimps.jpeg";
+import WizardMeme from "../assets/wizard.jpeg";
 
-export const memes = [CatMeme, CatMeme, AirBnbMeme];
+export const memes = [CatMeme, WizardMeme, BlimpMeme, AirBnbMeme];
 
 export type Category = {
   name: string;
