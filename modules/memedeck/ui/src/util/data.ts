@@ -3,12 +3,58 @@ import CatMeme from "../assets/cat.png";
 
 export const memes = [CatMeme, CatMeme, AirBnbMeme];
 
-export const categories = ["shizo", "epstein", "e/acc", "decels", "trump"];
+export type Category = {
+  name: string;
+  count: number;
+};
 
-export const templates = [
-  "bell curve",
-  "distracted boyfriend",
-  "expanding brain",
-  "anakin padme 4 panel",
-  "two buttons",
+export const categories: Category[] = [
+  {
+    name: "shizo",
+    count: 121,
+  },
+  {
+    name: "epstein",
+    count: 34,
+  },
+  {
+    name: "e/acc",
+    count: 30,
+  },
+  {
+    name: "decels",
+    count: 5,
+  },
+  {
+    name: "trump",
+    count: 4,
+  },
+];
+
+export type MemeTemplate = {
+  name: string;
+  count: number;
+};
+
+export const templates: MemeTemplate[] = [
+  {
+    name: "bell curve",
+    count: 32,
+  },
+  {
+    name: "distracted boyfriend",
+    count: 12,
+  },
+  {
+    name: "expanding brain",
+    count: 16,
+  },
+  {
+    name: "anakin padme 4 panel",
+    count: 4,
+  },
+  {
+    name: "two buttons",
+    count: 3,
+  },
 ];

@@ -3,7 +3,7 @@ import { NodeNotConnected } from "./components/NodeNotConnected";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { categories, memes, templates } from "./util/data";
-import { SearchBar } from "./components/Searchbar";
+import { SearchBar } from "./components/SearchBar";
 
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
@@ -21,7 +21,7 @@ function App() {
       <Header />
       <section className="flex flex-1 min-h-0 justify-between gap-6">
         <Sidebar memes={memes} categories={categories} templates={templates} />
-        <main className="flex flex-col flex-1 h-full gap-5">
+        <main className="flex flex-col flex-1 h-full gap-3">
           <SearchBar />
           <div className="flex flex-col flex-1 h-full p-5 gap-5 overflow-y-scroll rounded-3xl bg-black-200">
             {!nodeConnected ? (

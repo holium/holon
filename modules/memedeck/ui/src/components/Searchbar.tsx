@@ -13,7 +13,6 @@ export const SearchBar = () => {
         alt="Dropdown"
         onClick={(e) => {
           e.preventDefault();
-          // If not already focused, focus the input
           inputRef.current.focus();
         }}
         className="w-5 h-5 absolute left-3 top-2.5 opacity-75 user-select-none cursor-text"
