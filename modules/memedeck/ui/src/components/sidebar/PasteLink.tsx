@@ -19,12 +19,12 @@ export const PasteLink = () => {
         value={uploadLink}
         onChange={(e) => setUploadLink(e.target.value)}
         type="text"
-        className="bg-black-200 h-8 px-3 rounded-xl"
+        className="flex-1 text-sm h-8 px-3 pr-4 bg-black-32 rounded-xl placeholder-white-32 border border-white-4"
       />
       <button
         onClick={onClickUpload}
         disabled={!uploadLink}
-        className="bg-blue-400 h-8 px-3 rounded-xl"
+        className="bg-blue-500 text-sm h-8 px-3 rounded-xl"
       >
         Upload
       </button>

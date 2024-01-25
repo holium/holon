@@ -23,7 +23,7 @@ function App() {
         <Sidebar memes={memes} categories={categories} templates={templates} />
         <main className="flex flex-col flex-1 h-full gap-3">
           <SearchBar />
-          <div className="flex flex-col flex-1 h-full p-5 gap-5 overflow-y-scroll rounded-3xl bg-black-200">
+          <div className="flex flex-col flex-1 h-full p-5 gap-5 overflow-y-scroll rounded-3xl bg-black-200 border border-white-4">
             {!nodeConnected ? (
               <NodeNotConnected />
             ) : (

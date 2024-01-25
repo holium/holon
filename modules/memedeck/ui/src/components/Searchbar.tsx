@@ -20,7 +20,7 @@ export const SearchBar = () => {
       <input
         ref={inputRef}
         placeholder="Search for memes. (i.e. bell curve)"
-        className="flex-1 pl-10 pr-4 bg-black-32 h-10 rounded-full placeholder-white-32"
+        className="flex-1 pl-10 pr-4 bg-black-32 h-10 rounded-full placeholder-white-32 border border-white-4"
       />
       <div className="flex gap-1 items-center cursor-pointer">
         <p className="text-sm uppercase opacity-70">Random</p>
