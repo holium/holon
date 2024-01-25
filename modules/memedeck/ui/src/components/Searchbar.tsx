@@ -22,11 +22,11 @@ export const SearchBar = () => {
         placeholder="Search for memes. (i.e. bell curve)"
         className="flex-1 pl-10 pr-4 bg-black-32 h-10 rounded-full placeholder-white-32"
       />
-      <div className="flex gap-1 items-center">
+      <div className="flex gap-1 items-center cursor-pointer">
         <p className="text-sm uppercase opacity-70">Random</p>
         <img src={ChevronSvg} alt="Dropdown" className="w-4 h-4" />
       </div>
-      <div className="flex gap-1 items-center">
+      <div className="flex gap-1 items-center cursor-pointer">
         <img src={PostsSvg} alt="Dropdown" className="w-6 h-6" />
         <img src={ChevronSvg} alt="Dropdown" className="w-4 h-4" />
       </div>

@@ -4,16 +4,17 @@ type Props = {
   nTemplates: number;
 };
 
+const Stat = ({ value, label }: { value: number; label: string }) => (
+  <p className="truncate text-sm">
+    <span className="font-bold">{value}</span>
+    <span className="opacity-60"> {label}</span>
+  </p>
+);
+
 export const Statistics = ({ nMemes, nCategories, nTemplates }: Props) => (
   <div className="flex gap-2">
-    <p className="truncate">
-      <strong>{nMemes}</strong> memes
-    </p>
-    <p className="truncate">
-      <strong>{nCategories}</strong> categories
-    </p>
-    <p className="truncate">
-      <strong>{nTemplates}</strong> templates
-    </p>
+    <Stat value={nMemes} label="memes" />
+    <Stat value={nCategories} label="categories" />
+    <Stat value={nTemplates} label="templates" />
   </div>
 );
