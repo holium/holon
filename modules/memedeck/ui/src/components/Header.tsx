@@ -16,21 +16,27 @@ export const Header = () => {
 
   return (
     <header className="flex justify-between items-center h-16">
-      <a href="/">
-        <Pill>
-          <img src={HomeSvg} alt="home" className="w-4 h-4" />
-          <p>
-            <span className="text-md font-bold opacity-80">{nodeParts[0]}</span>
-            <span className="text-md opacity-30">{`.${nodeParts[1]}`}</span>
-          </p>
-        </Pill>
-      </a>
-      <a href="/">
-        <h1 className="text-3xl font-bold uppercase bangers select-none">
-          Meme Deck
-        </h1>
-      </a>
-      <div className="flex items-center gap-3">
+      <div className="flex md:min-w-64">
+        <a href="/">
+          <Pill>
+            <img src={HomeSvg} alt="home" className="w-4 h-4" />
+            <p>
+              <span className="text-md font-bold opacity-80">
+                {nodeParts[0]}
+              </span>
+              <span className="text-md opacity-30">{`.${nodeParts[1]}`}</span>
+            </p>
+          </Pill>
+        </a>
+      </div>
+      <div className="hidden md:flex items-center">
+        <a href="/">
+          <h1 className="text-3xl font-bold uppercase bangers select-none">
+            Meme Deck
+          </h1>
+        </a>
+      </div>
+      <div className="flex items-center gap-3 md:min-w-64">
         <Pill>
           <img src={OptimismPng} alt="Optimism" className="w-4 h-4" />
           <p className="text-md font-bold opacity-70">
