@@ -1,27 +1,13 @@
 import { useState, useEffect } from "react";
-import MockMeme from "./assets/cat.png";
 import { NodeNotConnected } from "./components/NodeNotConnected";
 import { Header } from "./components/Header";
-import { Statistics } from "./components/Statistics";
-import { PasteLink } from "./components/PasteLink";
-
-const categories = ["shizo", "epstein", "e/acc", "decels", "trump"];
-const templates = [
-  "bell curve",
-  "distracted boyfriend",
-  "expanding brain",
-  "anakin padme 4 panel",
-  "two buttons",
-];
+import { Sidebar } from "./components/sidebar/Sidebar";
+import { categories, memes, templates } from "./util/data";
 
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
 
-  const [memes, setMemes] = useState<string[]>([]);
-
   useEffect(() => {
-    setMemes([MockMeme, MockMeme, MockMeme, MockMeme, MockMeme]);
-
     if (window.our?.node && window.our?.process) {
       setNodeConnected(true);
     } else {
@@ -32,34 +18,9 @@ function App() {
   return (
     <div className="px-4 pb-4 max-w-7xl w-full flex flex-col min-h-0">
       <Header />
-      <section className="h-full flex justify-between gap-6">
-        <aside className="flex-col gap-6 min-w-60 hidden md:flex">
-          <div className="flex flex-col gap-2">
-            <h3 className="font-bold uppercase">Categories</h3>
-            {categories.map((category) => (
-              <a key={category} href={`#${category}`}>
-                <div>{category}</div>
-              </a>
-            ))}
-          </div>
-          <div className="flex flex-1 flex-col gap-2">
-            <h3 className="font-bold uppercase">Templates</h3>
-            {templates.map((template) => (
-              <a key={template} href={`#${template}`}>
-                <div>{template}</div>
-              </a>
-            ))}
-          </div>
-          <footer className="flex flex-col gap-4">
-            <Statistics
-              nMemes={memes.length}
-              nCategories={categories.length}
-              nTemplates={templates.length}
-            />
-            <PasteLink />
-          </footer>
-        </aside>
-        <main className="flex-1 h-full p-5 g-5 rounded-3xl bg-black-200 min-h-80">
+      <section className="flex flex-1 min-h-0 justify-between gap-6">
+        <Sidebar memes={memes} categories={categories} templates={templates} />
+        <main className="flex flex-col flex-1 h-full p-5 gap-5 overflow-y-scroll rounded-3xl bg-black-200">
           {!nodeConnected ? (
             <NodeNotConnected />
           ) : (
@@ -69,7 +30,7 @@ function App() {
                   key={meme}
                   src={meme}
                   alt="meme"
-                  className="rounded-xl w-full"
+                  className="rounded-xl w-full h-auto"
                 />
               ))}
             </>
