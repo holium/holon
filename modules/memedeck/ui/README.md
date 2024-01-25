@@ -5,8 +5,8 @@ Based on the Vite React Typescript template.
 ## Development
 
 ```zsh
-pnpm i
-pnpm dev
+npm i
+npm dev
 ```
 
 You may see an error:

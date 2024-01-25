@@ -156,7 +156,7 @@ fn handle_chat_request(
                 match Request::new()
                     .target(Address {
                         node: target.clone(),
-                        process: ProcessId::from_str("memedeck:memedeck:template.os")?,
+                        process: ProcessId::from_str("test:test:template.os")?,
                     })
                     .body(body)
                     .send_and_await_response(5)
@@ -249,7 +249,7 @@ fn handle_message(
 
     match message {
         Message::Response { .. } => {
-            println!("memedeck: got response - {:?}", message);
+            println!("test: got response - {:?}", message);
             return Ok(());
         }
         Message::Request {
@@ -270,7 +270,7 @@ fn handle_message(
 call_init!(init);
 
 fn init(our: Address) {
-    println!("memedeck: begin");
+    println!("test: begin");
 
     let mut message_archive: MessageArchive = HashMap::new();
     let mut channel_id = 0;
@@ -288,7 +288,7 @@ fn init(our: Address) {
         match handle_message(&our, &mut message_archive, &mut channel_id) {
             Ok(()) => {}
             Err(e) => {
-                println!("memedeck: error: {:?}", e);
+                println!("test: error: {:?}", e);
             }
         };
     }

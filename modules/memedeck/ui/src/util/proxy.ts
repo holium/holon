@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.BASE_URL;
+export const BASE_URL = import.meta.env.BASE_URL;
 
 if (window.our) window.our.process = BASE_URL?.replace("/", "");
 

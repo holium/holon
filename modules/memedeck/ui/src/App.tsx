@@ -4,11 +4,20 @@ import { Header } from "./components/Header";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { categories, memes, templates } from "./util/data";
 import { SearchBar } from "./components/SearchBar";
+import { BASE_URL } from "./util/proxy";
 
 function App() {
   const [nodeConnected, setNodeConnected] = useState(false);
 
   useEffect(() => {
+    // Get message history using http
+    fetch(`${BASE_URL}/messages`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+      })
+      .catch((error) => console.error(error));
+
     if (window.our?.node && window.our?.process) {
       setNodeConnected(true);
     } else {
