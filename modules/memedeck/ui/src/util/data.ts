@@ -1,6 +1,7 @@
-import MockMeme from "../assets/cat.png";
+import AirBnbMeme from "../assets/airbnb.jpg";
+import CatMeme from "../assets/cat.png";
 
-export const memes = [MockMeme, MockMeme, MockMeme, MockMeme, MockMeme];
+export const memes = [CatMeme, CatMeme, AirBnbMeme];
 
 export const categories = ["shizo", "epstein", "e/acc", "decels", "trump"];
 

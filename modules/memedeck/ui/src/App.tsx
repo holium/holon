@@ -26,12 +26,13 @@ function App() {
           ) : (
             <>
               {memes.map((meme) => (
-                <img
-                  key={meme}
-                  src={meme}
-                  alt="meme"
-                  className="rounded-xl w-full h-auto"
-                />
+                <a href={`#${meme}`} key={meme}>
+                  <img
+                    src={meme}
+                    alt="meme"
+                    className="rounded-xl w-full h-auto"
+                  />
+                </a>
               ))}
             </>
           )}
