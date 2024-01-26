@@ -16,6 +16,7 @@ pub type SurrealDBConn = Surreal<Db>;
 lazy_static::lazy_static! {
     static ref READ_KEYWORDS: HashSet<String> = {
         let mut set = HashSet::new();
+        // TODO: test LIVE SELECT
         let keywords = ["SELECT", "SHOW", "LIVE SELECT", "INFO", "USE"];
         for &keyword in &keywords {
             set.insert(keyword.to_string());

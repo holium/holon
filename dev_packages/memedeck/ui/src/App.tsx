@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NodeNotConnected } from "./components/NodeNotConnected";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/sidebar/Sidebar";
-import { SearchBar } from "./components/SearchBar";
+import { SearchBar } from "./components/Searchbar";
 import { BASE_URL } from "./util/proxy";
 import { Meme, MemeCategory, MemeTemplate } from "./util/types";
 
