@@ -53,6 +53,7 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                     // multiline string
                     let init_script = r#"
                         BEGIN TRANSACTION;
+
                         -- categories
                         CREATE category:culture SET name = 'culture';
                         CREATE category:event SET name = 'event';
@@ -94,6 +95,7 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                         CREATE event:protest SET name = 'Protest';
                         CREATE event:raid SET name = 'Raid';
                         CREATE event:trial SET name = 'Trial';
+
                         -- memes
                         CREATE meme:ai_generated SET name = 'AI-generated';
                         CREATE meme:advertisement SET name = 'Advertisement';
@@ -129,6 +131,7 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                         CREATE meme:viral_debate SET name = 'Viral Debate';
                         CREATE meme:viral_video SET name = 'Viral Video';
                         CREATE meme:visual_effect SET name = 'Visual Effect';
+
                         -- people
                         CREATE person:activist SET name = 'Activist';
                         CREATE person:actor SET name = 'Actor';
@@ -152,7 +155,8 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
                         CREATE person:tv_personality SET name = 'TV Personality';
                         CREATE person:vlogger SET name = 'Vlogger';
                         CREATE person:writer SET name = 'Writer';
-                        -- sites types Application 154  9,217 Blog 49  13,487 Forum 77  91,186 Generator 76  12,869 Marketplace 24  732 Media Host 69  9,682 News Publication 34  613 Reference 23  3,599 Social Media Page 88  4,111 Social Network 68  18,372
+
+                        -- sites
                         CREATE site:application SET name = 'Application';
                         CREATE site:blog SET name = 'Blog';
                         CREATE site:forum SET name = 'Forum';
