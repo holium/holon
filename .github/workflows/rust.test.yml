@@ -1,0 +1,25 @@
+name: rust test CI
+
+on:
+  push:
+    branches: [ graphdb-runtime-extension ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: SSH and deploy node app
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ vars.SSH_HOST_TEST }}
+        username: ${{ vars.SSH_USER_TEST }}
+        key: ${{ secrets.SSH_ED25519KEY_TEST }}
+        port: ${{ vars.SSH_PORT_TEST }}
+        script: |
+          cd /root/holon/
+          source "/root/.cargo/env"
+          git pull origin graphdb-runtime-extension
+          # uncomment the next line when the build process is working
+          # cargo build --release --target x86_64-unknown-linux-gnu
+          touch ~/holon_built
