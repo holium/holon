@@ -182,16 +182,14 @@ async fn handle_request(
 
             let db = db.lock().await;
             db.use_ns(source.process.package()).await.unwrap();
-            db.use_db(db_name).await.unwrap();   
+            db.use_db(db_name).await.unwrap();
 
             let query = db.query(resource.clone().query());
 
-            query
-                .await
-                .map_err(|err| GraphDbError::SurrealDBError {
-                    action: "".into(),
-                    error: err.to_string(),
-                })?;
+            query.await.map_err(|err| GraphDbError::SurrealDBError {
+                action: "".into(),
+                error: err.to_string(),
+            })?;
 
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }
@@ -229,25 +227,29 @@ async fn handle_request(
             };
 
             let results_data = match results.take(0) {
-                Ok(r) => {
-                    match r {
-                        surrealdb::sql::Value::Array(a) => {
-                            Some(
-                                surrealdb::sql::Value::Array(a).into_json().to_string().as_bytes().to_vec()
-                            )
-                        }
-                        surrealdb::sql::Value::Object(o) => {
-                            Some(
-                                surrealdb::sql::Value::Object(o).into_json().to_string().as_bytes().to_vec()
-                            )
-                        }
-                        _ => {
-                            Some(
-                                surrealdb::sql::Value::None.into_json().to_string().as_bytes().to_vec()
-                            )
-                        }
-                    }
-                }
+                Ok(r) => match r {
+                    surrealdb::sql::Value::Array(a) => Some(
+                        surrealdb::sql::Value::Array(a)
+                            .into_json()
+                            .to_string()
+                            .as_bytes()
+                            .to_vec(),
+                    ),
+                    surrealdb::sql::Value::Object(o) => Some(
+                        surrealdb::sql::Value::Object(o)
+                            .into_json()
+                            .to_string()
+                            .as_bytes()
+                            .to_vec(),
+                    ),
+                    _ => Some(
+                        surrealdb::sql::Value::None
+                            .into_json()
+                            .to_string()
+                            .as_bytes()
+                            .to_vec(),
+                    ),
+                },
                 Err(e) => {
                     return Err(GraphDbError::SurrealDBError {
                         action: "".into(),
@@ -490,12 +492,13 @@ async fn check_caps(
 
             fs::create_dir_all(&graphdb_path).await?;
 
-            let db = SurrealDBConn::new::<RocksDb>((graphdb_path, Config::default())).await.map_err(
-                |err| GraphDbError::SurrealDBError {
-                        action: "".into(),
-                        error: err.to_string(),
-                    },
-                ).unwrap();
+            let db = SurrealDBConn::new::<RocksDb>((graphdb_path, Config::default()))
+                .await
+                .map_err(|err| GraphDbError::SurrealDBError {
+                    action: "".into(),
+                    error: err.to_string(),
+                })
+                .unwrap();
 
             // Define a namespace for the process
             // TODO: if it doesn't already exist
@@ -513,7 +516,7 @@ async fn check_caps(
                 }
             })?;
 
-            // Create a new database for the process 
+            // Create a new database for the process
             // TODO: if it doesn't already exist
             db.query(format!("DEFINE database {};", request.db))
                 .await
@@ -601,19 +604,17 @@ fn make_error_message(our_name: String, km: &KernelMessage, error: GraphDbError)
 fn get_json_params(blob: Option<LazyLoadBlob>) -> Result<Option<serde_json::Value>, GraphDbError> {
     match blob {
         None => Ok(None),
-        Some(blob) => {
-            match serde_json::from_slice::<serde_json::Value>(&blob.bytes) {
-                Ok(params) => {
-                    if params.is_array() && params.as_array().unwrap().is_empty() {
-                        return Ok(None);
-                    }
-                    Ok(Some(params))
+        Some(blob) => match serde_json::from_slice::<serde_json::Value>(&blob.bytes) {
+            Ok(params) => {
+                if params.is_array() && params.as_array().unwrap().is_empty() {
+                    return Ok(None);
                 }
-                Err(e) => Err(GraphDbError::InputError {
-                    error: format!("graphdb: gave unparsable params: {}", e),
-                }),
+                Ok(Some(params))
             }
-        }
+            Err(e) => Err(GraphDbError::InputError {
+                error: format!("graphdb: gave unparsable params: {}", e),
+            }),
+        },
     }
 }
 
