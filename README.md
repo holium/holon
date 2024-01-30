@@ -50,7 +50,7 @@ cargo +nightly build --release
 ```
 
 ### Boot
-Get an eth-sepolia-rpc API key and pass that as an argument. You can get one for free at `alchemy.com`.
+Get an eth-sepolia-rpc API key and pass that as an argument. You can get one for free at `alchemy.com` or `infura.io`.
 
 Make sure not to use the same home directory for two nodes at once! You can use any name for the home directory: here we just use `home`. The `--` here separates cargo arguments from binary arguments.
 
