@@ -1352,6 +1352,7 @@ pub enum DefineResourceType {
     Namespace { name: String },
     Database { name: String },
     Table { name: String },
+    Index { name: String, table: String, columns: Vec<String> },
 }
 
 impl DefineResourceType {
@@ -1379,6 +1380,26 @@ impl DefineResourceType {
                     .filter(|c| c.is_alphanumeric())
                     .collect::<String>();
                 format!("DEFINE TABLE {} SCHEMALESS;", name)
+            }
+            DefineResourceType::Index { name, table, columns } => {
+                let name = name
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>();
+                let table = table
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>();
+                let columns = columns
+                    .iter()
+                    .map(|c| {
+                        c.chars()
+                            .filter(|c| c.is_alphanumeric())
+                            .collect::<String>()
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("DEFINE INDEX {} ON {} ({}) SEARCH ANALYZER ascii", name, table, columns)
             }
         }
     }
