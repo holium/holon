@@ -1349,10 +1349,20 @@ pub struct GraphDbRequest {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum DefineResourceType {
-    Namespace { name: String },
-    Database { name: String },
-    Table { name: String },
-    Index { name: String, table: String, columns: Vec<String> },
+    Namespace {
+        name: String,
+    },
+    Database {
+        name: String,
+    },
+    Table {
+        name: String,
+    },
+    Index {
+        name: String,
+        table: String,
+        columns: Vec<String>,
+    },
 }
 
 impl DefineResourceType {
@@ -1381,7 +1391,11 @@ impl DefineResourceType {
                     .collect::<String>();
                 format!("DEFINE TABLE {} SCHEMALESS;", name)
             }
-            DefineResourceType::Index { name, table, columns } => {
+            DefineResourceType::Index {
+                name,
+                table,
+                columns,
+            } => {
                 let name = name
                     .chars()
                     .filter(|c| c.is_alphanumeric())
@@ -1399,7 +1413,10 @@ impl DefineResourceType {
                     })
                     .collect::<Vec<String>>()
                     .join(", ");
-                format!("DEFINE INDEX {} ON {} ({}) SEARCH ANALYZER ascii", name, table, columns)
+                format!(
+                    "DEFINE INDEX {} ON {} ({}) SEARCH ANALYZER ascii",
+                    name, table, columns
+                )
             }
         }
     }
