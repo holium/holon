@@ -1119,7 +1119,7 @@ pub struct VfsRequest {
     pub action: VfsAction,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum VfsAction {
     CreateDrive,
     CreateDir,
@@ -1149,7 +1149,7 @@ pub enum VfsAction {
     Hash,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum SeekFrom {
     Start(u64),
     End(i64),
