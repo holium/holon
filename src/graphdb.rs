@@ -302,7 +302,7 @@ async fn handle_request(
                 }
             };
 
-            let results = match res {
+            let _results = match res {
                 Ok(response) => response,
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -313,7 +313,8 @@ async fn handle_request(
                 }
             };
 
-            println!("\n results = {:?}", results);
+            // TODO: handle results
+            // println!("graphdb: write results Ok", results);
 
             (serde_json::to_vec(&GraphDbResponse::Ok).unwrap(), None)
         }

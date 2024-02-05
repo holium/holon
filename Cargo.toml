@@ -1,12 +1,7 @@
 [package]
 name = "kinode"
-<<<<<<< HEAD
-authors = ["UqbarDAO", "Holium"]
-version = "0.5.1"
-=======
 authors = ["KinodeDAO"]
 version = "0.5.2"
->>>>>>> main
 edition = "2021"
 description = "A general-purpose sovereign cloud computing platform"
 homepage = "https://kinode.org"
