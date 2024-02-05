@@ -1,0 +1,15 @@
+[
+    {
+        "process_name": "graphdb_test",
+        "process_wasm_path": "/graphdb_test.wasm",
+        "on_exit": "Restart",
+        "request_networking": true,
+        "request_capabilities": [
+            "http_server:distro:sys",
+            "graphdb:distro:sys",
+            "net:distro:sys"
+        ],
+        "grant_capabilities": [],
+        "public": true
+    }
+]

@@ -324,7 +324,10 @@ fn handle_local_request(our: &Address, request: &LocalRequest, state: &mut State
         ),
         LocalRequest::Install(package) => match handle_install(our, package) {
             Ok(()) => LocalResponse::InstallResponse(InstallResponse::Success),
-            Err(_) => LocalResponse::InstallResponse(InstallResponse::Failure),
+            Err(e) => {
+                println!("{:?}", e);
+                LocalResponse::InstallResponse(InstallResponse::Failure)
+            }
         },
         LocalRequest::Uninstall(package) => match handle_uninstall(package) {
             Ok(()) => LocalResponse::UninstallResponse(UninstallResponse::Success),
@@ -521,6 +524,11 @@ fn handle_install(our: &Address, package: &PackageId) -> anyhow::Result<()> {
                             .parse::<ProcessId>()
                         {
                             if let Some(params) = map.get("params") {
+                                if params.to_string() == "\"root\"" {
+                                    println!("app-store: app requested root capability, ignoring");
+                                    continue;
+                                }
+
                                 capability = get_capability(
                                     &Address {
                                         node: our.node.clone(),

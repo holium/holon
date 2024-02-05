@@ -1,0 +1,4 @@
+[submodule "process_lib"]
+	path = process_lib
+	branch = graphdb-runtime-extension
+	url = git@github.com:holium/process_lib.git
