@@ -25,6 +25,7 @@ mod terminal;
 mod timer;
 mod types;
 mod vfs;
+mod python;
 
 const EVENT_LOOP_CHANNEL_CAPACITY: usize = 10_000;
 const EVENT_LOOP_DEBUG_CHANNEL_CAPACITY: usize = 50;
@@ -38,6 +39,7 @@ const CAP_CHANNEL_CAPACITY: usize = 1_000;
 const KV_CHANNEL_CAPACITY: usize = 1_000;
 const SQLITE_CHANNEL_CAPACITY: usize = 1_000;
 const GDB_CHANNEL_CAPACITY: usize = 1_000;
+const PYTHON_CHANNEL_CAPACITY: usize = 1_000;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -205,6 +207,9 @@ async fn main() {
     // terminal receives prints via this channel, all other modules send prints
     let (print_sender, print_receiver): (PrintSender, PrintReceiver) =
         mpsc::channel(TERMINAL_CHANNEL_CAPACITY);
+    // python sender and receiver
+    let (python_sender, python_receiver): (MessageSender, MessageReceiver) =
+        mpsc::channel(PYTHON_CHANNEL_CAPACITY);
 
     println!("finding public IP address...");
     let our_ip: std::net::Ipv4Addr = {
@@ -405,6 +410,11 @@ async fn main() {
             gdb_sender,
             false,
         ),
+        (
+            ProcessId::new(Some("python"), "distro", "sys"),
+            python_sender,
+            false,
+        ),
     ];
 
     /*
@@ -542,6 +552,15 @@ async fn main() {
         caps_oracle_sender.clone(),
         home_directory_path.clone(),
     ));
+    tasks.spawn(python::python(
+        our.name.clone(),
+        kernel_message_sender.clone(),
+        print_sender.clone(),
+        python_receiver,
+        caps_oracle_sender.clone(),
+        home_directory_path.clone(),
+    ));
+
     // if a runtime task exits, try to recover it,
     // unless it was terminal signaling a quit
     // or a SIG* was intercepted

@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::process::Command;
 use std::{
     fs, io,
@@ -133,6 +134,9 @@ fn main() {
         return;
     }
 
+    // Set up Python virtual environment
+    setup_python_venv().unwrap();
+
     let pwd = std::env::current_dir().unwrap();
 
     // Pull wit from git repo
@@ -228,4 +232,38 @@ fn main() {
         .unwrap();
     }
     writeln!(bootstrapped_processes, "];").unwrap();
+}
+
+pub fn setup_python_venv() -> io::Result<()> {
+    // Define the venv path
+    let venv_path = "./venv";
+
+    // Check if the venv directory already exists
+    if !Path::new(venv_path).exists() {
+        // Step 1: Check for Python installation and create a venv
+        println!("Creating Python virtual environment...");
+        Command::new("python3")
+            .arg("-m")
+            .arg("venv")
+            .arg(venv_path)
+            .status()?;
+    } else {
+        println!("Virtual environment already exists.");
+    }
+
+    // Note: Directly activating the venv is not feasible within the Rust program for subsequent commands,
+    // but we can use the Python executable within the venv directly for Python commands.
+
+    // Example: Ensure we are using the Python executable from within the venv
+    let python_exec = format!("{}/bin/python", venv_path);
+
+    // Example Python command using the venv
+    // This is a placeholder for where you would add commands that need to run within the Python environment
+    let output = Command::new(python_exec)
+        .arg("--version")
+        .output()?;
+
+    println!("Python version from venv: {}", String::from_utf8_lossy(&output.stdout));
+
+    Ok(())
 }

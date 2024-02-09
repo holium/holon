@@ -16,6 +16,7 @@ lazy_static::lazy_static! {
     pub static ref KV_PROCESS_ID: ProcessId = ProcessId::new(Some("kv"), "distro", "sys");
     pub static ref SQLITE_PROCESS_ID: ProcessId = ProcessId::new(Some("sqlite"), "distro", "sys");
     pub static ref GRAPHDB_PROCESS_ID: ProcessId = ProcessId::new(Some("graphdb"), "distro", "sys");
+    pub static ref PYTHON_PROCESS_ID: ProcessId = ProcessId::new(Some("python"), "distro", "sys");
 }
 
 //
@@ -1420,5 +1421,39 @@ pub enum GraphDbError {
     #[error("graphdb: input bytes/json/key error: {error}")]
     InputError { error: String },
     #[error("graphdb: IO error: {error}")]
+    IOError { error: String },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PythonRequest {
+    pub package_id: PackageId,
+    pub action: PythonAction,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum PythonAction {
+    RunScript {
+        /// The script to run must be in the package's `scripts` directory
+        script: String,
+        /// The function to call in the script
+        func: String,
+        /// The arguments to pass to the script
+        args: Vec<String>
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum PythonResponse {
+    Result { data: Vec<u8> },
+    Err { error: PythonError },
+}
+
+#[derive(Debug, Serialize, Deserialize, Error)]
+pub enum PythonError {
+    #[error("python: No capability: {error}")]
+    NoCap { error: String },
+    #[error("python: input bytes/json/key error: {error}")]
+    InputError { error: String },
+    #[error("python: IO error: {error}")]
     IOError { error: String },
 }

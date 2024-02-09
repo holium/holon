@@ -24,3 +24,5 @@ src/bootstrapped_processes.rs
 # Ignore the generated files
 */memes/*
 */memes-*/*
+
+venv

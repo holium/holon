@@ -81,6 +81,7 @@ The runtime distro processes are:
 - `sqlite:distro:sys`
 - `graphdb:distro:sys`
 - `vfs:distro:sys`
+- `python:distro:sys`
 
 The distro userspace packages are:
 

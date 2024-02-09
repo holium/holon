@@ -16,6 +16,7 @@
             "sqlite:distro:sys",
             "kv:distro:sys",
             "graphdb:distro:sys",
+            "python:distro:sys",
             "chess:chess:sys",
             "kns_indexer:kns_indexer:sys",
             {
