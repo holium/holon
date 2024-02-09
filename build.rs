@@ -259,11 +259,12 @@ pub fn setup_python_venv() -> io::Result<()> {
 
     // Example Python command using the venv
     // This is a placeholder for where you would add commands that need to run within the Python environment
-    let output = Command::new(python_exec)
-        .arg("--version")
-        .output()?;
+    let output = Command::new(python_exec).arg("--version").output()?;
 
-    println!("Python version from venv: {}", String::from_utf8_lossy(&output.stdout));
+    println!(
+        "Python version from venv: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
 
     Ok(())
 }

@@ -6,14 +6,13 @@ use pyo3::types::{IntoPyDict, PyString, PyTuple};
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 
+use crate::types::*;
 use std::process::Command;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
 use tokio::fs::OpenOptions;
+use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
-use crate::types::*;
-
 
 pub async fn python(
     our_node: String,
@@ -131,24 +130,29 @@ async fn handle_request(
         &request,
     )
     .await?;
-    
+
     let package_path = PathBuf::from(format!("{}/{}", vfs_path, request.package_id));
     let (body, bytes) = match &request.action {
         PythonAction::RunScript { script, func, args } => {
             // get python path from .venv
             let venv_path = Path::new(".venv");
             let python_exec = format!("{}/bin/python", venv_path.display());
-            let requirements_path = format!("{}/pkg/scripts/requirements.txt", package_path.clone().display());
+            let requirements_path = format!(
+                "{}/pkg/scripts/requirements.txt",
+                package_path.clone().display()
+            );
 
             // install the requirements to the .venv
             let _ = Command::new("pip3")
                 .arg("install")
                 .arg("-r")
-                .arg(&requirements_path.clone()).output().unwrap();
+                .arg(&requirements_path.clone())
+                .output()
+                .unwrap();
 
             if Path::new(&python_exec).exists() {
                 // load the string from the file
-                 let mut requirements_file = OpenOptions::new()
+                let mut requirements_file = OpenOptions::new()
                     .read(true)
                     .write(false)
                     .create(false)
@@ -157,11 +161,12 @@ async fn handle_request(
                     .await
                     .map_err(|e| PythonError::IOError {
                         error: e.to_string(),
-                    }).unwrap();
+                    })
+                    .unwrap();
 
                 let mut requirements = String::new();
                 requirements_file.read_to_string(&mut requirements).await?;
-                
+
                 // for each line in the file, install the requirements
                 let _py = Python::with_gil(|py| -> PyResult<_> {
                     for line in requirements.lines() {
@@ -187,11 +192,12 @@ async fn handle_request(
                 .await
                 .map_err(|e| PythonError::IOError {
                     error: e.to_string(),
-                }).unwrap();
+                })
+                .unwrap();
 
             let mut script = String::new();
             script_file.read_to_string(&mut script).await?;
-            
+
             let response = Python::with_gil(|py| -> PyResult<_> {
                 // set the current working directory to the package's directory
                 let os = PyModule::import(py, "os")?;
@@ -205,28 +211,37 @@ async fn handle_request(
                 let function_result: String = match py.run(&script, None, Some(locals)) {
                     Ok(_) => {
                         let module = PyModule::from_code(
-                                py,
-                                script.as_str(),
-                                format!("{}.py", script_name).as_str(),
-                                script_name)
-                            .unwrap();
+                            py,
+                            script.as_str(),
+                            format!("{}.py", script_name).as_str(),
+                            script_name,
+                        )
+                        .unwrap();
 
                         let function = module.getattr(func.as_str()).unwrap();
-                        let py_args = PyTuple::new(py, &args.iter().map(|arg| PyString::new(py, arg)).collect::<Vec<_>>());
-                        
+                        let py_args = PyTuple::new(
+                            py,
+                            &args
+                                .iter()
+                                .map(|arg| PyString::new(py, arg))
+                                .collect::<Vec<_>>(),
+                        );
+
                         let result = function.call1(py_args).unwrap();
                         result.str().unwrap().to_string()
-                    },
+                    }
                     Err(e) => {
                         println!("Failed to execute script: {:?}", e);
                         e.to_string()
                     }
-                };  
+                };
                 Ok(function_result)
             });
 
             let result_data = match response {
-                Ok(r) => PythonResponse::Result { data: r.as_bytes().to_vec() },
+                Ok(r) => PythonResponse::Result {
+                    data: r.as_bytes().to_vec(),
+                },
                 Err(e) => {
                     return Err(PythonError::InputError {
                         error: format!("python: error running script: {}", e),
@@ -234,7 +249,7 @@ async fn handle_request(
                 }
             };
 
-            (serde_json::to_vec(&result_data).unwrap(), None)            
+            (serde_json::to_vec(&result_data).unwrap(), None)
         }
     };
 
@@ -292,7 +307,7 @@ async fn check_caps(
 ) -> Result<(), PythonError> {
     let (send_cap_bool, recv_cap_bool) = tokio::sync::oneshot::channel();
     let src_package_id = PackageId::new(source.process.package(), source.process.publisher());
-    
+
     match &request.action {
         PythonAction::RunScript { script, .. } => {
             if src_package_id != request.package_id {
@@ -348,7 +363,8 @@ async fn add_capability(
             node: our_node.to_string(),
             process: PYTHON_PROCESS_ID.clone(),
         },
-        params: serde_json::to_string(&serde_json::json!({ "kind": kind, "script": script })).unwrap(),
+        params: serde_json::to_string(&serde_json::json!({ "kind": kind, "script": script }))
+            .unwrap(),
     };
     let (send_cap_bool, recv_cap_bool) = tokio::sync::oneshot::channel();
     send_to_caps_oracle

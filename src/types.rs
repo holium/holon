@@ -1438,7 +1438,7 @@ pub enum PythonAction {
         /// The function to call in the script
         func: String,
         /// The arguments to pass to the script
-        args: Vec<String>
+        args: Vec<String>,
     },
 }
 

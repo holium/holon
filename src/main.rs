@@ -18,6 +18,7 @@ mod kernel;
 mod keygen;
 mod kv;
 mod net;
+mod python;
 mod register;
 mod sqlite;
 mod state;
@@ -25,7 +26,6 @@ mod terminal;
 mod timer;
 mod types;
 mod vfs;
-mod python;
 
 const EVENT_LOOP_CHANNEL_CAPACITY: usize = 10_000;
 const EVENT_LOOP_DEBUG_CHANNEL_CAPACITY: usize = 50;
